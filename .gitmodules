@@ -1,12 +1,12 @@
 [submodule "modules/mod-aoe-loot"]
 	path = modules/mod-aoe-loot
 	url = https://github.com/azerothcore/mod-aoe-loot.git
-[submodule "modules/mod-dungeon-scale"]
-	path = modules/mod-dungeon-scale
-	url = https://github.com/NathanHandley/mod-dungeon-scale.git
 [submodule "modules/mod-individual-progression"]
 	path = modules/mod-individual-progression
 	url = https://github.com/ZhengPeiRu21/mod-individual-progression.git
 [submodule "modules/mod-playerbots"]
 	path = modules/mod-playerbots
 	url = https://github.com/mod-playerbots/mod-playerbots.git
+[submodule "modules/mod-autobalance"]
+	path = modules/mod-autobalance
+	url = https://github.com/azerothcore/mod-autobalance.git
