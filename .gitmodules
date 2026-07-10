@@ -25,3 +25,6 @@
 [submodule "modules/mod-TimeIsTime"]
 	path = modules/mod-TimeIsTime
 	url = https://github.com/dunjeon/mod-TimeIsTime.git
+[submodule "modules/mod-ah-bot"]
+	path = modules/mod-ah-bot
+	url = https://github.com/azerothcore/mod-ah-bot.git
