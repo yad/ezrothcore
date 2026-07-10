@@ -30,7 +30,7 @@ echo "== Mise à jour upstream =="
 git fetch upstream
 
 
-BRANCH=$(git branch --show-current)
+BRANCH=Playerbot
 
 echo "Branche actuelle : $BRANCH"
 
