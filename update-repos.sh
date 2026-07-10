@@ -138,7 +138,7 @@ if [[ "$REP" =~ ^[Yy]$ ]]; then
 
     git commit -m "Update AzerothCore modules"
 
-    git push origin "$BRANCH"
+    git push origin main
 
     echo "✓ Changements poussés."
 
