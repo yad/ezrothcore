@@ -2361,6 +2361,11 @@ void Unit::CalcAbsorbResist(DamageInfo& dmgInfo, bool Splited)
     if (!victim || !victim->IsAlive() || !damage)
         return;
 
+    if (victim->IsPlayerOrPlayerPet())
+    {
+        damage = damage / sWorld->getRate(RATE_ARMOR_PLAYER);
+    }
+
     // Magic damage, check for resists
     // Ignore spells that cant be resisted
     // Xinef: holy resistance exists for npcs
@@ -7726,6 +7731,22 @@ Unit* Unit::GetOwner() const
         return ObjectAccessor::GetUnit(*this, ownerGUID);
 
     return nullptr;
+}
+
+bool Unit::IsPlayerOrPlayerPet() const
+{
+    if (GetTypeId() == TYPEID_PLAYER)
+    {
+        return true;
+    }
+
+    if (GetTypeId() == TYPEID_UNIT && ((Creature*)this)->IsPet())
+    {
+        Unit* owner = this->GetOwner();
+        return (owner && owner->GetTypeId() == TYPEID_PLAYER && ((Pet*)this)->IsPermanentPetFor((Player*)owner));
+    }
+
+    return false;
 }
 
 Unit* Unit::GetCharmer() const
@@ -13487,6 +13508,19 @@ Unit* Unit::SelectNearbyNoTotemTarget(Unit* exclude, float dist) const
 void ApplyPercentModFloatVar(float& var, float val, bool apply)
 {
     var *= (apply ? (100.0f + val) / 100.0f : 100.0f / (100.0f + val));
+}
+
+void Unit::SetAttackTime(WeaponAttackType att, uint32 val)
+{
+    if (IsPlayerOrPlayerPet())
+    {
+        uint32 attackTimer = uint32(val / sWorld->getRate(RATE_ATTACKSPEED_PLAYER));
+        SetFloatValue(static_cast<uint16>(UNIT_FIELD_BASEATTACKTIME) + att, attackTimer * m_modAttackSpeedPct[att]);
+    }
+    else
+    {
+        SetFloatValue(static_cast<uint16>(UNIT_FIELD_BASEATTACKTIME) + att, val * m_modAttackSpeedPct[att]);
+    }
 }
 
 void Unit::ApplyAttackTimePercentMod(WeaponAttackType att, float val, bool apply)

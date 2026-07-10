@@ -2155,6 +2155,20 @@ WaterBreath.Timer = 180000
 EnableLowLevelRegenBoost = 1
 
 #
+#    Rate.AttackSpeed.Player
+#        Description: Attack speed rate for players.
+#        Default:     1
+
+Rate.AttackSpeed.Player = 1
+
+#
+#    Rate.Armor.Player
+#        Description: Armor rate for players.
+#        Default:     1
+
+Rate.Armor.Player = 1
+
+#
 #    Rate.MoveSpeed.Player
 #        Description: Movement speed rate for players.
 #        Default:     1

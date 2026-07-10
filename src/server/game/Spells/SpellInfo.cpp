@@ -2759,6 +2759,11 @@ uint32 SpellInfo::CalcCastTime(Unit* caster, Spell* spell) const
     if (HasAttribute(SPELL_ATTR0_USES_RANGED_SLOT) && (!IsAutoRepeatRangedSpell()))
         castTime += 500;
 
+    if (spell && spell->GetCaster()->IsPlayerOrPlayerPet())
+    {
+        castTime = int32(castTime / sWorld->getRate(RATE_ATTACKSPEED_PLAYER));
+    }
+
     if (caster)
         caster->ModSpellCastTime(this, castTime, spell);
 

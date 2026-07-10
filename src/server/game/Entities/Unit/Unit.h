@@ -708,6 +708,7 @@ public:
     void SetUInt32Value(uint16 index, uint32 value); /// @todo: move this in Object class or move GetUInt32value here but keep consistency
 
     [[nodiscard]] Unit* GetOwner() const;
+    [[nodiscard]] bool IsPlayerOrPlayerPet() const;
 
     // GUID Methods
     [[nodiscard]] ObjectGuid GetOwnerGUID() const { return GetGuidValue(UNIT_FIELD_SUMMONEDBY); }
@@ -917,7 +918,7 @@ public:
         return (uint32)f_BaseAttackTime;
     }
 
-    void SetAttackTime(WeaponAttackType att, uint32 val) { SetFloatValue(static_cast<uint16>(UNIT_FIELD_BASEATTACKTIME) + att, val * m_modAttackSpeedPct[att]); }
+    void SetAttackTime(WeaponAttackType att, uint32 val);
     void ApplyAttackTimePercentMod(WeaponAttackType att, float val, bool apply);
     void ApplyCastTimePercentMod(float val, bool apply);
 
