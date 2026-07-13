@@ -25,3 +25,6 @@
 [submodule "modules/mod-TimeIsTime"]
 	path = modules/mod-TimeIsTime
 	url = https://github.com/dunjeon/mod-TimeIsTime.git
+[submodule "modules/mod-player-bot-level-brackets"]
+	path = modules/mod-player-bot-level-brackets
+	url = https://github.com/DustinHendrickson/mod-player-bot-level-brackets.git
