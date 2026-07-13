@@ -1,0 +1,25 @@
+services:
+
+  ac-worldserver:
+    restart: "no"
+    volumes:
+      - ./modules:/azerothcore/modules:ro
+    ports:
+      - ${DOCKER_RA_EXTERNAL_PORT:-3443}:3443
+
+  ac-worldserver-watcher:
+    container_name: ac-worldserver-watcher
+    build:
+      context: ./watcher
+    networks:
+      - ac-network
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DOCKER_DB_ROOT_PASSWORD:-password}
+      RA_USER: "raadmin"
+      RA_PASS: "rapassword"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./env/dist/logs:/logs:ro
+    depends_on:
+      - ac-database
+      - ac-authserver
