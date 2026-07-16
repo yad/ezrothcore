@@ -120,3 +120,4 @@ local.properties
 .cache
 compile_commands.json
 client_data/
+env/dist/etc/
