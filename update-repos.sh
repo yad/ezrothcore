@@ -9,8 +9,8 @@ echo "======================================"
 echo " AzerothCore Repository Manager"
 echo "======================================"
 
-git clone https://github.com/yad/data_client.git >/dev/null 2>&1
-cd data_client
+git clone https://github.com/yad/ezroth_client_data.git client_data >/dev/null 2>&1
+cd client_data
 git pull --rebase
 cd ..
 

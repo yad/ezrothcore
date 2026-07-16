@@ -10,7 +10,7 @@ services:
       DOCKER_VOL_DATA=./client_data
     volumes:
       - ./modules:/azerothcore/modules:ro
-      - ./data_client:/azerothcore/env/dist/data/:ro
+      - ./client_data:/azerothcore/env/dist/data/:ro
 
   ac-worldserver-watcher:
     container_name: ac-worldserver-watcher
@@ -26,3 +26,6 @@ services:
     depends_on:
       - ac-database
       - ac-authserver
+      
+  ac-client-data-init:
+    command: ["sh", "-c", "echo bye"]      
