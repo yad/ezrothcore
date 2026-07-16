@@ -5,11 +5,6 @@ set -u
 WORLD_CONTAINER="ac-worldserver"
 AUTH_LOG="/logs/Auth.log"
 
-RA_HOST="ac-worldserver"
-RA_PORT="3443"
-RA_USER="${RA_USER}"
-RA_PASS="${RA_PASS}"
-
 MYSQL_HOST="ac-database"
 MYSQL_USER="root"
 MYSQL_PASSWORD="${MYSQL_ROOT_PASSWORD}"
@@ -27,32 +22,6 @@ LAST_AUTH=0
 log()
 {
     echo "$(date '+%Y-%m-%d %H:%M:%S') : $*"
-}
-
-ra()
-{
-    local command="$1"
-
-    (
-        sleep 1
-        echo "$RA_USER"
-
-        sleep 1
-        echo "$RA_PASS"
-
-        sleep 2
-        echo "$command"
-
-        sleep 1
-        echo "quit"
-
-    ) | telnet "$RA_HOST" "$RA_PORT" >/dev/null 2>&1
-}
-
-announce()
-{
-    local message="$*"
-    ra "announce $message"
 }
 
 worldserver_running()
@@ -91,11 +60,13 @@ get_real_players()
             -p"$MYSQL_PASSWORD" \
             -N -B \
             -e "
-                SELECT COUNT(1)
-                FROM acore_auth.account
-                WHERE online = 1
-                AND username NOT LIKE 'RNDBOT%'
-                AND username <> 'AHBOT';
+                SELECT COUNT(*)
+                FROM acore_auth.account a
+                INNER JOIN acore_characters.characters c
+                    ON a.id = c.account
+                WHERE GREATEST(a.online, c.online) = 1
+                AND a.username NOT LIKE 'RNDBOT%'
+                AND a.username <> 'AHBOT';
             " 2>/dev/null
     )
 
@@ -111,7 +82,7 @@ shutdown_countdown()
 {
     local remaining=$SHUTDOWN_DELAY
 
-    announce "Aucun joueur connecté. Arrêt automatique du serveur dans ${remaining} secondes."
+    log "Aucun joueur connecté. Arrêt automatique du serveur dans ${remaining} secondes."
 
     while (( remaining > 0 ))
     do
@@ -120,12 +91,12 @@ shutdown_countdown()
 
         case "$remaining" in
             120|60|30|10|5|4|3|2|1)
-                announce "Arrêt du serveur dans ${remaining} seconde(s)."
+                log "Arrêt du serveur dans ${remaining} seconde(s)."
                 ;;
         esac
     done
 
-    announce "Arrêt du serveur."
+    log "Arrêt du serveur."
 
     log "Arrêt du conteneur Docker"
 
@@ -160,7 +131,7 @@ cancel_shutdown()
         wait "$SHUTDOWN_PID" 2>/dev/null
     fi
 
-    announce "Arrêt automatique annulé."
+    log "Arrêt automatique annulé."
 
     SHUTDOWN_PID=""
     SHUTDOWN_SCHEDULED=false

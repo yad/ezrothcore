@@ -119,3 +119,4 @@ local.properties
 # ==================
 .cache
 compile_commands.json
+/data_client/
