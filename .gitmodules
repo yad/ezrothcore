@@ -31,3 +31,6 @@
 [submodule "modules/mod-autofishing"]
 	path = modules/mod-autofishing
 	url = https://github.com/Karmiven/mod-autofishing.git
+[submodule "modules/mod-dungeon-clear"]
+	path = modules/mod-dungeon-clear
+	url = https://github.com/jrad7/mod-dungeon-clear.git
