@@ -28,3 +28,6 @@
 [submodule "modules/mod-player-bot-level-brackets"]
 	path = modules/mod-player-bot-level-brackets
 	url = https://github.com/DustinHendrickson/mod-player-bot-level-brackets.git
+[submodule "modules/mod-autofishing"]
+	path = modules/mod-autofishing
+	url = https://github.com/Karmiven/mod-autofishing.git
