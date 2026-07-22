@@ -15,14 +15,41 @@ SHUTDOWN_DELAY=180
 AUTH_COOLDOWN=30
 
 START_TIME=0
-SHUTDOWN_SCHEDULED=false
 SHUTDOWN_PID=""
 LAST_AUTH=0
+LAST_STATE=""   # avoids spamming the console with the same status every cycle
 
-log()
+# --- Logging -----------------------------------------------------
+
+# Colors are disabled when output isn't a terminal (e.g. docker logs
+# redirected to a file) so ANSI codes don't pollute the log files.
+if [[ -t 1 ]]; then
+    C_RESET='\033[0m'
+    C_DIM='\033[2m'
+    C_INFO='\033[36m'
+    C_OK='\033[32m'
+    C_WARN='\033[33m'
+    C_ERR='\033[31m'
+    C_BOLD='\033[1m'
+else
+    C_RESET='' ; C_DIM='' ; C_INFO='' ; C_OK='' ; C_WARN='' ; C_ERR='' ; C_BOLD=''
+fi
+
+_log()
 {
-    echo "$(date '+%Y-%m-%d %H:%M:%S') : $*"
+    local level="$1" color="$2"; shift 2
+    printf "%b%s%b %b[%-5s]%b %s\n" \
+        "$C_DIM" "$(date '+%Y-%m-%d %H:%M:%S')" "$C_RESET" \
+        "$color" "$level" "$C_RESET" \
+        "$*"
 }
+
+log_info()  { _log "INFO"  "$C_INFO" "$*"; }
+log_ok()    { _log "OK"    "$C_OK"   "$*"; }
+log_warn()  { _log "WARN"  "$C_WARN" "$*"; }
+log_error() { _log "ERROR" "$C_ERR"  "$*"; }
+
+# --- Docker / MySQL -------------------------------------------------------
 
 worldserver_running()
 {
@@ -35,16 +62,15 @@ start_worldserver()
         return
     fi
 
-    log "Démarrage worldserver"
+    log_info "Starting worldserver..."
 
     if docker start "$WORLD_CONTAINER" >/dev/null; then
         START_TIME=$(date +%s)
-        SHUTDOWN_SCHEDULED=false
-        SHUTDOWN_PID=""
+        LAST_STATE=""
 
-        log "Worldserver démarré"
+        log_ok "Worldserver started, entering warmup phase (${WARMUP_TIME}s)"
     else
-        log "Erreur démarrage worldserver"
+        log_error "Failed to start worldserver"
     fi
 }
 
@@ -73,16 +99,18 @@ get_real_players()
     if [[ "$result" =~ ^[0-9]+$ ]]; then
         echo "$result"
     else
-        log "Erreur lecture joueurs SQL"
+        log_error "Failed to read player count (SQL query failed)"
         echo "-1"
     fi
 }
+
+# --- Automatic shutdown ------------------------------------------------
 
 shutdown_countdown()
 {
     local remaining=$SHUTDOWN_DELAY
 
-    log "Aucun joueur connecté. Arrêt automatique du serveur dans ${remaining} secondes."
+    log_warn "No players connected — automatic shutdown scheduled in ${remaining}s"
 
     while (( remaining > 0 ))
     do
@@ -91,66 +119,77 @@ shutdown_countdown()
 
         case "$remaining" in
             120|60|30|10|5|4|3|2|1)
-                log "Arrêt du serveur dans ${remaining} seconde(s)."
+                log_warn "Shutting down in ${remaining}s..."
                 ;;
         esac
     done
 
-    log "Arrêt du serveur."
+    log_warn "Shutting down worldserver (Docker container)"
 
-    log "Arrêt du conteneur Docker"
+    if docker stop "$WORLD_CONTAINER" >/dev/null 2>&1; then
+        log_ok "Worldserver stopped successfully"
+    else
+        log_error "Failed to stop worldserver"
+    fi
+}
 
-    docker stop "$WORLD_CONTAINER" >/dev/null 2>&1
-
-    SHUTDOWN_SCHEDULED=false
-    SHUTDOWN_PID=""
+# Returns true if a countdown is currently running (based on the actual
+# PID state, not a shared boolean, which doesn't survive the "&" fork).
+shutdown_in_progress()
+{
+    [[ -n "$SHUTDOWN_PID" ]] && kill -0 "$SHUTDOWN_PID" 2>/dev/null
 }
 
 schedule_shutdown()
 {
-    if $SHUTDOWN_SCHEDULED; then
+    if shutdown_in_progress; then
         return
     fi
-
-    log "Démarrage du countdown (${SHUTDOWN_DELAY}s)"
 
     shutdown_countdown &
 
     SHUTDOWN_PID=$!
-    SHUTDOWN_SCHEDULED=true
 }
 
 cancel_shutdown()
 {
-    if ! $SHUTDOWN_SCHEDULED; then
+    if ! shutdown_in_progress; then
+        SHUTDOWN_PID=""
         return
     fi
 
-    if [[ -n "$SHUTDOWN_PID" ]] && kill -0 "$SHUTDOWN_PID" 2>/dev/null; then
-        kill "$SHUTDOWN_PID" 2>/dev/null
-        wait "$SHUTDOWN_PID" 2>/dev/null
-    fi
+    kill "$SHUTDOWN_PID" 2>/dev/null
+    wait "$SHUTDOWN_PID" 2>/dev/null
 
-    log "Arrêt automatique annulé."
+    log_ok "Automatic shutdown cancelled (activity detected)"
 
     SHUTDOWN_PID=""
-    SHUTDOWN_SCHEDULED=false
-
-    log "Countdown annulé"
 }
 
-log "Worldserver watcher démarré"
+# --- Startup --------------------------------------------------------
+
+printf "%b" "$C_BOLD"
+echo "============================================================"
+echo " Worldserver Watcher — automatic monitoring and management"
+echo "============================================================"
+printf "%b" "$C_RESET"
+log_info "Monitored container: ${WORLD_CONTAINER}"
+log_info "Check interval: ${CHECK_INTERVAL}s | Warmup: ${WARMUP_TIME}s | Shutdown delay: ${SHUTDOWN_DELAY}s"
 
 if worldserver_running; then
     START_TIME=$(date +%s)
-    log "Worldserver déjà actif"
+    log_ok "Worldserver already running at watcher startup"
+else
+    log_info "Worldserver currently stopped — waiting for a connection"
 fi
 
 (
     while [ ! -f "$AUTH_LOG" ]; do
-        log "Attente $AUTH_LOG"
+        log_warn "Log file not found, retrying: $AUTH_LOG"
         sleep 5
     done
+
+    log_ok "Authentication monitoring active ($AUTH_LOG)"
 
     tail -Fn0 "$AUTH_LOG" | while read -r line; do
 
@@ -164,7 +203,7 @@ fi
 
             LAST_AUTH=$NOW
 
-            log "Authentification détectée"
+            log_ok "Authentication detected → waking up worldserver"
 
             start_worldserver
             cancel_shutdown
@@ -177,6 +216,10 @@ fi
 while true
 do
     if ! worldserver_running; then
+        if [[ "$LAST_STATE" != "stopped" ]]; then
+            log_info "Idle — worldserver is stopped"
+            LAST_STATE="stopped"
+        fi
         sleep "$CHECK_INTERVAL"
         continue
     fi
@@ -187,7 +230,7 @@ do
 
         REMAINING=$((WARMUP_TIME - (NOW - START_TIME)))
 
-        log "Warmup actif (${REMAINING}s restantes)"
+        log_info "Warmup in progress (${REMAINING}s remaining)"
 
         sleep "$CHECK_INTERVAL"
         continue
@@ -201,10 +244,16 @@ do
     fi
 
     if (( PLAYERS > 0 )); then
-        log "Joueurs connectés = $PLAYERS, keep alive"
+        if [[ "$LAST_STATE" != "active" ]]; then
+            log_ok "${PLAYERS} player(s) connected — server kept alive"
+            LAST_STATE="active"
+        fi
         cancel_shutdown
     else
-        log "Joueurs connectés = $PLAYERS, shutdown"
+        if [[ "$LAST_STATE" != "idle" ]]; then
+            log_warn "No players connected — entering idle mode"
+            LAST_STATE="idle"
+        fi
         schedule_shutdown
     fi
 
