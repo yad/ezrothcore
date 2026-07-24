@@ -34,3 +34,6 @@
 [submodule "modules/mod-dungeon-clear"]
 	path = modules/mod-dungeon-clear
 	url = https://github.com/jrad7/mod-dungeon-clear.git
+[submodule "modules/mod-junk-to-gold"]
+	path = modules/mod-junk-to-gold
+	url = https://github.com/noisiver/mod-junk-to-gold.git
