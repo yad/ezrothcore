@@ -1,0 +1,84 @@
+#
+# MODULE: PlayerBoost
+#
+
+[worldserver]
+
+#######################################################################
+# PlayerBoost.Enable
+#     Active ou désactive le module.
+#
+#     Valeurs :
+#         0 = Désactivé
+#         1 = Activé
+#
+#     Défaut : 1
+#######################################################################
+
+PlayerBoost.Enable = 1
+
+
+#######################################################################
+# PlayerBoost.AttackSpeedBonus
+#     Réduction du temps d'attaque du joueur (en %).
+#
+#     30 = attaques 30 % plus rapides.
+#     S'applique à :
+#       - arme principale
+#       - arme secondaire
+#       - arme à distance
+#
+#     Plage : 0 - 99
+#
+#     Défaut : 30
+#######################################################################
+
+PlayerBoost.AttackSpeedBonus = 30
+
+
+#######################################################################
+# PlayerBoost.DamageReductionPct
+#     Réduction des dégâts subis par le joueur (en %).
+#
+#     S'applique aux dégâts physiques et magiques.
+#
+#     20 = le joueur reçoit 20 % de dégâts en moins.
+#
+#     Plage : 0 - 100
+#
+#     Défaut : 20
+#######################################################################
+
+PlayerBoost.DamageReductionPct = 20
+
+
+#######################################################################
+# PlayerBoost.PetAttackSpeedBonus
+#     Réduction du temps d'attaque des familiers / gardiens.
+#
+#     S'applique notamment aux :
+#       - familiers Chasseur
+#       - démons Démoniste
+#       - goules Chevalier de la Mort
+#       - autres Guardians
+#
+#     Plage : 0 - 99
+#
+#     Défaut : 30
+#######################################################################
+
+PlayerBoost.PetAttackSpeedBonus = 30
+
+
+#######################################################################
+# PlayerBoost.PetDamageReductionPct
+#     Réduction des dégâts subis par les familiers / gardiens.
+#
+#     S'applique aux dégâts physiques et magiques.
+#
+#     Plage : 0 - 100
+#
+#     Défaut : 20
+#######################################################################
+
+PlayerBoost.PetDamageReductionPct = 20

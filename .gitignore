@@ -25,6 +25,9 @@
 /src/server/scripts/Custom/*
 !/src/server/scripts/Custom/README.md
 
+!/modules/mod-level-bag-reward
+!/modules/mod-player-boost
+
 /*.override.yml
 /*.override.yaml
 !/docker-compose.override.yml
