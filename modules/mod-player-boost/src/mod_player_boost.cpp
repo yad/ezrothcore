@@ -171,6 +171,47 @@ public:
     }
 };
 
+// GlobalScript - SPELL_ATTRS_SPELL_HASTE_AFFECTS_PERIODIC
+//
+// Ce flag est vérifié dans Unit::ModSpellCastTime pour le cas
+// SPELL_DAMAGE_CLASS_NONE, ce qui permet à UNIT_MOD_CAST_SPEED
+// (positionné par ApplyCastTimePercentMod) d'y prendre effet.
+// Les sorts canalisés sont volontairement exclus.
+
+class PlayerBoostSpell : public GlobalScript
+{
+public:
+    PlayerBoostSpell()
+        : GlobalScript("PlayerBoostSpell", { GLOBALHOOK_ON_LOAD_SPELL_CUSTOM_ATTR })
+    {
+    }
+
+    void OnLoadSpellCustomAttr(SpellInfo* spell) override
+    {
+        if (!spell)
+            return;
+
+        // Pierre de foyer
+        if (spell->Id == 8690)
+        {
+            spell->AttributesEx5 |= SPELL_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC;
+            return;
+        }
+
+        // Invocation de monture : sort non canalisé,
+        // SPELL_DAMAGE_CLASS_NONE, temps de cast > 0
+        // et qui applique l'aura SPELL_AURA_MOUNTED.
+        if (!spell->IsChanneled() &&
+            spell->DmgClass == SPELL_DAMAGE_CLASS_NONE &&
+            spell->CastTimeEntry &&
+            spell->CastTimeEntry->CastTime > 0 &&
+            spell->HasAura(SPELL_AURA_MOUNTED))
+        {
+            spell->AttributesEx5 |= SPELL_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC;
+        }
+    }
+};
+
 // -----------------------------------------------------------------------------
 // Enregistrement
 // -----------------------------------------------------------------------------
@@ -180,4 +221,5 @@ void AddPlayerBoostScripts()
     new PlayerBoostConfig();
     new PlayerBoostPlayer();
     new PlayerBoostUnit();
+    new PlayerBoostSpell();
 }
