@@ -6,13 +6,17 @@
 
 #include <algorithm>
 
-static bool sEnable = true;
+static bool sEnable = false;
 
-static float sAttackSpeedBonus = 30.0f;
-static float sDamageReductionPct = 20.0f;
+static float sAttackSpeedBonus = 0.0f;
+static float sDamageReductionPct = 0.0f;
 
-static float sPetAttackSpeedBonus = 30.0f;
-static float sPetDamageReductionPct = 20.0f;
+static float sPetAttackSpeedBonus = 0.0f;
+static float sPetDamageReductionPct = 0.0f;
+
+static float sCastSpeedBonus = 0.0f;
+static float sPetCastSpeedBonus = 0.0f;
+
 
 // -----------------------------------------------------------------------------
 // Joueur
@@ -28,6 +32,14 @@ static void ApplyAttackSpeedBonus(Player* player)
     player->ApplyAttackTimePercentMod(RANGED_ATTACK, sAttackSpeedBonus, true);
 }
 
+static void ApplyCastSpeedBonus(Player* player)
+{
+    if (!sEnable || sCastSpeedBonus <= 0.0f)
+        return;
+
+    player->ApplyCastTimePercentMod(sCastSpeedBonus, true);
+}
+
 // -----------------------------------------------------------------------------
 // Pet
 // -----------------------------------------------------------------------------
@@ -41,6 +53,14 @@ static void ApplyPetAttackSpeedBonus(Guardian* guardian)
     guardian->ApplyAttackTimePercentMod(OFF_ATTACK, sPetAttackSpeedBonus, true);
 }
 
+static void ApplyPetCastSpeedBonus(Guardian* guardian)
+{
+    if (!sEnable || sCastSpeedBonus <= 0.0f)
+        return;
+
+    guardian->ApplyCastTimePercentMod(sCastSpeedBonus, true);
+}
+
 // -----------------------------------------------------------------------------
 // Configuration
 // -----------------------------------------------------------------------------
@@ -52,19 +72,25 @@ public:
 
     void OnBeforeConfigLoad(bool /*reload*/) override
     {
-        sEnable = sConfigMgr->GetOption<bool>("PlayerBoost.Enable", true);
+        sEnable = sConfigMgr->GetOption<bool>("PlayerBoost.Enable", false);
 
         sAttackSpeedBonus =
-            sConfigMgr->GetOption<float>("PlayerBoost.AttackSpeedBonus", 30.0f);
+            sConfigMgr->GetOption<float>("PlayerBoost.AttackSpeedBonus", 0.0f);
 
         sDamageReductionPct =
-            sConfigMgr->GetOption<float>("PlayerBoost.DamageReductionPct", 20.0f);
+            sConfigMgr->GetOption<float>("PlayerBoost.DamageReductionPct", 0.0f);
 
         sPetAttackSpeedBonus =
-            sConfigMgr->GetOption<float>("PlayerBoost.PetAttackSpeedBonus", 30.0f);
+            sConfigMgr->GetOption<float>("PlayerBoost.PetAttackSpeedBonus", 0.0f);
 
         sPetDamageReductionPct =
-            sConfigMgr->GetOption<float>("PlayerBoost.PetDamageReductionPct", 20.0f);
+            sConfigMgr->GetOption<float>("PlayerBoost.PetDamageReductionPct", 0.0f);
+
+        sCastSpeedBonus =
+            sConfigMgr->GetOption<float>("PlayerBoost.CastSpeedBonus", 0.0f);
+
+        sPetCastSpeedBonus =
+            sConfigMgr->GetOption<float>("PlayerBoost.sPetCastSpeedBonus", 0.0f);
     }
 };
 
@@ -80,16 +106,19 @@ public:
     void OnPlayerLogin(Player* player) override
     {
         ApplyAttackSpeedBonus(player);
+        ApplyCastSpeedBonus(player);
     }
 
     void OnPlayerCreate(Player* player) override
     {
         ApplyAttackSpeedBonus(player);
+        ApplyCastSpeedBonus(player);
     }
 
     void OnPlayerAfterGuardianInitStatsForLevel(Player* /*player*/, Guardian* guardian) override
     {
         ApplyPetAttackSpeedBonus(guardian);
+        ApplyPetCastSpeedBonus(guardian);
     }
 };
 
