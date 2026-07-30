@@ -25,7 +25,7 @@ public:
         if (player->AddItem(BAG_ITEM_ID, 1))
         {
             ChatHandler(player->GetSession()).PSendSysMessage(
-                "Félicitations pour le niveau %u ! Vous recevez un sac de 36 emplacements.",
+                "Félicitations pour le niveau {} ! Vous recevez un sac de 36 emplacements.",
                 newLevel);
 
             return;
@@ -43,7 +43,7 @@ public:
         MailDraft(
             "Récompense de niveau",
             Acore::StringFormat(
-                "Félicitations pour le niveau %u !\n"
+                "Félicitations pour le niveau {} !\n"
                 "Votre inventaire était plein, voici votre sac par courrier.",
                 newLevel))
             .AddItem(mailItem)
@@ -55,7 +55,7 @@ public:
         CharacterDatabase.CommitTransaction(trans);
 
         ChatHandler(player->GetSession()).PSendSysMessage(
-            "Félicitations pour le niveau %u ! "
+            "Félicitations pour le niveau {} ! "
             "Votre inventaire était plein, votre sac a été envoyé par courrier.",
             newLevel);
     }
