@@ -188,24 +188,17 @@ public:
 
     void OnLoadSpellCustomAttr(SpellInfo* spell) override
     {
-        if (!spell)
+        if (!sEnable || sCastSpeedBonus <= 0.0f)
             return;
 
-        // Pierre de foyer
-        if (spell->Id == 8690)
+        if (!spell ||
+            !spell->CastTimeEntry ||
+            spell->CastTimeEntry->CastTime <= 0)
         {
-            spell->AttributesEx5 |= SPELL_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC;
             return;
         }
 
-        // Invocation de monture : sort non canalisé,
-        // SPELL_DAMAGE_CLASS_NONE, temps de cast > 0
-        // et qui applique l'aura SPELL_AURA_MOUNTED.
-        if (!spell->IsChanneled() &&
-            spell->DmgClass == SPELL_DAMAGE_CLASS_NONE &&
-            spell->CastTimeEntry &&
-            spell->CastTimeEntry->CastTime > 0 &&
-            spell->HasAura(SPELL_AURA_MOUNTED))
+        if (spell->DmgClass == SPELL_DAMAGE_CLASS_NONE)
         {
             spell->AttributesEx5 |= SPELL_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC;
         }
