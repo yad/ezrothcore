@@ -65,3 +65,8 @@ void AddLevelBagRewardScripts()
 {
     new LevelBagReward();
 }
+
+void Addmod_level_bag_rewardScripts()
+{
+    AddLevelBagRewardScripts();
+}

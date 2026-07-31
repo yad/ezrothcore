@@ -216,3 +216,8 @@ void AddPlayerBoostScripts()
     new PlayerBoostUnit();
     new PlayerBoostSpell();
 }
+
+void Addmod_player_boostScripts()
+{
+    AddPlayerBoostScripts();
+}
