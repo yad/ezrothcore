@@ -26,7 +26,7 @@ public:
 
         bool isFlying = player->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_TAXI_FLIGHT);
 
-        // Transition "au sol" -> "en vol" : c'est le decollage
+        // Transition "au sol" -> "en vol" : c'est le décollage
         if (isFlying && !state->wasInFlight)
             GiveWhistleIfMissing(player);
 
@@ -36,14 +36,14 @@ public:
 private:
     void GiveWhistleIfMissing(Player* player)
     {
-        // Verifie sacs + banque
+        // Vérifie sacs + banque
         if (player->HasItemCount(WHISTLE_ITEM_ID, 1, true))
             return;
 
         if (player->AddItem(WHISTLE_ITEM_ID, 1))
         {
             ChatHandler(player->GetSession()).PSendSysMessage(
-                "Le maitre du vol vous glisse un sifflet dans la poche. Bon voyage !");
+                "Le maître du vol vous glisse un sifflet dans la poche. Bon voyage !");
             return;
         }
 
@@ -56,9 +56,9 @@ private:
         mailItem->SaveToDB(trans);
 
         MailDraft(
-            "Sifflet du maitre du vol",
-            "Votre inventaire etait plein au moment du decollage.\n"
-            "Voici votre sifflet, envoye par courrier.")
+            "Sifflet du maître du vol",
+            "Votre inventaire était plein au moment du décollage.\n"
+            "Voici votre sifflet, envoyé par courrier.")
             .AddItem(mailItem)
             .SendMailTo(
                 trans,
@@ -68,8 +68,8 @@ private:
         CharacterDatabase.CommitTransaction(trans);
 
         ChatHandler(player->GetSession()).PSendSysMessage(
-            "Le maitre du vol vous offre un sifflet, mais votre inventaire etait plein : "
-            "il vous a ete envoye par courrier.");
+            "Le maître du vol vous offre un sifflet, mais votre inventaire était plein : "
+            "il vous a été envoyé par courrier.");
     }
 };
 

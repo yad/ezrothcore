@@ -5,7 +5,6 @@
 #include "Player.h"
 #include "ScriptMgr.h"
 
-constexpr uint32 BAG_ITEM_ID = 23162;      // Onyxia Hide Backpack (36 slots)
 constexpr uint32 POSTMASTER_NPC = 34337;   // The Postmaster
 
 class LevelBagReward : public PlayerScript
@@ -17,8 +16,36 @@ public:
     {
         uint8 newLevel = player->GetLevel();
 
-        // Récompense tous les 10 niveaux
-        if (newLevel % 10 != 0)
+        // Récompense tous les 5 niveaux
+        if (newLevel % 5 != 0)
+            return;
+
+        uint32 BAG_ITEM_ID = 0;
+
+        switch(newLevel) {
+            case 5: BAG_ITEM_ID = 4497; break;    //+10   Heavy Brown Bag
+
+            case 10: BAG_ITEM_ID = 10050; break;  //+12   Mageweave Bag
+
+            case 15: BAG_ITEM_ID = 14046; break;  //+14   Runecloth Bag
+
+            case 20: BAG_ITEM_ID = 14155; break;  //+16   Mooncloth Bag
+            case 25: BAG_ITEM_ID = 14155; break;  //+16   Mooncloth Bag
+
+            case 30: BAG_ITEM_ID = 21843; break;  //+18   Imbued Netherweave Bag
+            case 35: BAG_ITEM_ID = 21843; break;  //+18   Imbued Netherweave Bag
+
+            case 40: BAG_ITEM_ID = 41599; break;  //+20   Frostweave Bag
+            case 45: BAG_ITEM_ID = 41599; break;  //+20   Frostweave Bag
+
+            case 50: BAG_ITEM_ID = 41600; break;  //+22   Glacial Bag
+            case 55: BAG_ITEM_ID = 41600; break;  //+22   Glacial Bag
+
+            default: BAG_ITEM_ID = 23162; break;  //+36   A Very Large Bag
+        }
+
+        // "A Very Large Bag": on limite à 1 exemplaire tous les 10 niveaux
+        if (BAG_ITEM_ID == 23162 && newLevel % 10 != 0)
             return;
 
         // Essaye d'ajouter le sac directement dans l'inventaire
