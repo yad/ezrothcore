@@ -21,27 +21,28 @@ public:
             return;
 
         uint32 BAG_ITEM_ID = 0;
+        uint32 BAG_SIZE = 0;
 
         switch(newLevel) {
-            case 5: BAG_ITEM_ID = 4497; break;    //+10   Heavy Brown Bag
+            case 5: BAG_ITEM_ID = 4497; BAG_SIZE = 10; break;    //+10   Heavy Brown Bag
 
-            case 10: BAG_ITEM_ID = 10050; break;  //+12   Mageweave Bag
+            case 10: BAG_ITEM_ID = 10050; BAG_SIZE = 12; break;  //+12   Mageweave Bag
 
-            case 15: BAG_ITEM_ID = 14046; break;  //+14   Runecloth Bag
+            case 15: BAG_ITEM_ID = 14046; BAG_SIZE = 14; break;  //+14   Runecloth Bag
 
-            case 20: BAG_ITEM_ID = 14155; break;  //+16   Mooncloth Bag
-            case 25: BAG_ITEM_ID = 14155; break;  //+16   Mooncloth Bag
+            case 20: BAG_ITEM_ID = 14155; BAG_SIZE = 16; break;  //+16   Mooncloth Bag
+            case 25: BAG_ITEM_ID = 14155; BAG_SIZE = 16; break;  //+16   Mooncloth Bag
 
-            case 30: BAG_ITEM_ID = 21843; break;  //+18   Imbued Netherweave Bag
-            case 35: BAG_ITEM_ID = 21843; break;  //+18   Imbued Netherweave Bag
+            case 30: BAG_ITEM_ID = 21843; BAG_SIZE = 18; break;  //+18   Imbued Netherweave Bag
+            case 35: BAG_ITEM_ID = 21843; BAG_SIZE = 18; break;  //+18   Imbued Netherweave Bag
 
-            case 40: BAG_ITEM_ID = 41599; break;  //+20   Frostweave Bag
-            case 45: BAG_ITEM_ID = 41599; break;  //+20   Frostweave Bag
+            case 40: BAG_ITEM_ID = 41599; BAG_SIZE = 20; break;  //+20   Frostweave Bag
+            case 45: BAG_ITEM_ID = 41599; BAG_SIZE = 20; break;  //+20   Frostweave Bag
 
-            case 50: BAG_ITEM_ID = 41600; break;  //+22   Glacial Bag
-            case 55: BAG_ITEM_ID = 41600; break;  //+22   Glacial Bag
+            case 50: BAG_ITEM_ID = 41600; BAG_SIZE = 22; break;  //+22   Glacial Bag
+            case 55: BAG_ITEM_ID = 41600; BAG_SIZE = 22; break;  //+22   Glacial Bag
 
-            default: BAG_ITEM_ID = 23162; break;  //+36   A Very Large Bag
+            default: BAG_ITEM_ID = 23162; BAG_SIZE = 36; break;  //+36   A Very Large Bag
         }
 
         // "A Very Large Bag": on limite à 1 exemplaire tous les 10 niveaux
@@ -52,8 +53,8 @@ public:
         if (player->AddItem(BAG_ITEM_ID, 1))
         {
             ChatHandler(player->GetSession()).PSendSysMessage(
-                "Félicitations pour le niveau {} ! Vous recevez un sac de 36 emplacements.",
-                newLevel);
+                "Félicitations pour le niveau {} ! Vous recevez un sac de {} emplacements.",
+                newLevel, BAG_SIZE);
 
             return;
         }

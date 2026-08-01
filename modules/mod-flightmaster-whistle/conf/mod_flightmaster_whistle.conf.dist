@@ -1,0 +1,61 @@
+#
+# Credits: silviu20092
+#
+
+[worldserver]
+
+########################################
+# Mod Flightmaster Whistle configuration
+########################################
+#
+#    Flightmaster.Whistle.Enable
+#        Description: Enable/disable the module
+#        Default:     0 - Disabled
+#                     1 - Enabled
+#
+
+Flightmaster.Whistle.Enable = 1
+
+#
+#    Flightmaster.Whistle.Timer
+#        Description: Players will be able to teleport to nearest flight master every Flightmaster.Whistle.Timer seconds
+#        Default: 900 - can use the command once every 15 minutes
+#
+
+Flightmaster.Whistle.Timer = 900
+
+#
+#    Flightmaster.Whistle.Preserve.Zone
+#        Description: If 1, the nearest flightmaster is always searched in the same zone as the player's. For example, if the
+#                     player is in Barrens, the nearest flightmaster is searched only in Barrens. If 0, the nearest flightmaster
+#                     is searched globally (still limited to continent though). So this means that if the player is in northern
+#                     Barrens, the nearest flightmaster will be found in Ashenvale.
+#        Default: 1 - zone is preserved when searching
+#
+
+Flightmaster.Whistle.Preserve.Zone = 1
+
+#
+#    Flightmaster.Whistle.LinkMainCities
+#        Description: Link main cities to their respective zones (ex. Orgrimmar to Durotar). If this is 1, then players in Durotar
+#                     can be teleported to the flight master in Orgrimmar.
+#        Default: 0
+#
+
+Flightmaster.Whistle.LinkMainCities = 0
+
+#
+#    Flightmaster.Whistle.MinPlayerLevel
+#        Description: Minimum player level required to use the Flightmaster Whistle
+#        Default: 1
+#
+
+Flightmaster.Whistle.MinPlayerLevel = 1
+
+#
+#    Flightmaster.Whistle.OnlyKnown
+#        Description: Choose only known flightmasters (the ones that player already visited)
+#        Default: 1
+#
+
+Flightmaster.Whistle.OnlyKnown = 1

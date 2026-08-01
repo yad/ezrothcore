@@ -78,7 +78,7 @@ void AddNpcFlightmasterWhistleGiftScripts()
     new npc_flightmaster_whistle_gift();
 }
 
-void Addmod_flightmaster_whistle_giftScripts()
-{
-    AddNpcFlightmasterWhistleGiftScripts();
-}
+// void Addmod_flightmaster_whistle_giftScripts()
+// {
+//     AddNpcFlightmasterWhistleGiftScripts();
+// }

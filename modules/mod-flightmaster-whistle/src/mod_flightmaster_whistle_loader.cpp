@@ -1,0 +1,14 @@
+/*
+ * Credits: silviu20092
+ */
+
+void AddSC_mod_flightmaster_whistle_worldscript();
+void AddSC_mod_flightmaster_whistle_itemscript();
+void AddNpcFlightmasterWhistleGiftScripts();
+
+void Addmod_flightmaster_whistleScripts()
+{
+    AddSC_mod_flightmaster_whistle_worldscript();
+    AddSC_mod_flightmaster_whistle_itemscript();
+    AddNpcFlightmasterWhistleGiftScripts();
+}
