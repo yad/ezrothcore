@@ -37,9 +37,6 @@
 [submodule "modules/mod-junk-to-gold"]
 	path = modules/mod-junk-to-gold
 	url = https://github.com/noisiver/mod-junk-to-gold.git
-[submodule "modules/mod-flightmaster-whistle"]
-	path = modules/mod-flightmaster-whistle
-	url = https://github.com/silviu20092/mod-flightmaster-whistle.git
 [submodule "modules/mod-open-world-party-scaling"]
 	path = modules/mod-open-world-party-scaling
 	url = https://github.com/Stefan2102/mod-open-world-party-scaling.git

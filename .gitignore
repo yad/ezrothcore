@@ -27,6 +27,7 @@
 
 !/modules/mod-level-bag-reward
 !/modules/mod-player-boost
+!/modules/mod-flightmaster-whistle
 !/modules/mod-flightmaster-whistle-gift
 
 /*.override.yml
