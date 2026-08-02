@@ -48,7 +48,7 @@ VALUES
     0,
     1,
     1,
-    110001,
+    8690,   -- sort Pierre de Foyer réutilisé, filtré côté script sur l'entry de l'objet
     0,
     0,
     -1,
@@ -58,38 +58,10 @@ VALUES
 
 
 
--- ITEM DBC
-DELETE FROM `item_dbc`
-WHERE `ID` = 70000;
-
-INSERT INTO `item_dbc`
-(
-    `ID`,
-    `ClassID`,
-    `SubclassID`,
-    `Sound_Override_Subclassid`,
-    `Material`,
-    `DisplayInfoID`,
-    `InventoryType`,
-    `SheatheType`
-)
-VALUES
-(
-    70000,
-    15,
-    0,
-    -1,
-    -1,
-    15798,
-    0,
-    0
-);
-
-
-
 -- SPELL SCRIPT
 DELETE FROM `spell_script_names`
-WHERE `spell_id` = 110001;
+WHERE `spell_id` = 8690
+AND `ScriptName` = 'spell_flightmaster_whistle_cast';
 
 INSERT INTO `spell_script_names`
 (
@@ -98,52 +70,8 @@ INSERT INTO `spell_script_names`
 )
 VALUES
 (
-    110001,
+    8690,
     'spell_flightmaster_whistle_cast'
-);
-
-
-
--- SPELL DBC
-DELETE FROM `spell_dbc`
-WHERE `ID` = 110001;
-
-
-INSERT INTO `spell_dbc`
-(
-    `ID`,
-    `Targets`,
-    `CastingTimeIndex`,
-    `RecoveryTime`,
-    `DurationIndex`,
-    `RangeIndex`,
-    `EquippedItemClass`,
-    `Effect_1`,
-    `ImplicitTargetA_1`,
-    `ImplicitTargetB_1`,
-    `EffectMiscValue_1`,
-    `Name_Lang_enUS`,
-    `Name_Lang_frFR`,
-    `Description_Lang_enUS`,
-    `Description_Lang_frFR`
-)
-VALUES
-(
-    110001,
-    1,
-    1,
-    900000,
-    0,
-    1,
-    -1,
-    77,
-    1,
-    0,
-    0,
-    'Flightmaster Whistle',
-    'Sifflet de maître de vol',
-    'Teleports you to the nearest flightmaster.',
-    'Vous téléporte auprès du maître de vol le plus proche.'
 );
 
 
@@ -152,7 +80,6 @@ VALUES
 DELETE FROM `item_template_locale`
 WHERE `ID` = 70000
 AND `locale` = 'frFR';
-
 
 INSERT INTO `item_template_locale`
 (

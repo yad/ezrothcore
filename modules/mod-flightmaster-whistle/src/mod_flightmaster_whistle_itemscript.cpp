@@ -1,23 +1,30 @@
 #include "ScriptMgr.h"
 #include "SpellScript.h"
-#include "SpellScriptLoader.h"
 #include "Player.h"
 #include "Map.h"
 #include "flightmaster_whistle.h"
 
-
 enum FlightmasterWhistleSpells
 {
-    SPELL_FLIGHTMASTER_WHISTLE_CAST = 110001
+    SPELL_HEARTHSTONE = 8690,
+    ITEM_FLIGHTMASTER_WHISTLE = 70000
 };
-
 
 class spell_flightmaster_whistle_cast : public SpellScript
 {
     PrepareSpellScript(spell_flightmaster_whistle_cast);
 
+    bool IsWhistleCast()
+    {
+        Item* castItem = GetCastItem();
+        return castItem && castItem->GetEntry() == ITEM_FLIGHTMASTER_WHISTLE;
+    }
+
     SpellCastResult CheckCast()
     {
+        if (!IsWhistleCast())
+            return SPELL_CAST_OK; // laisse la vraie Pierre de Foyer tranquille
+
         Player* player = GetCaster()->ToPlayer();
         if (!player)
             return SPELL_FAILED_DONT_REPORT;
@@ -44,25 +51,26 @@ class spell_flightmaster_whistle_cast : public SpellScript
         return SPELL_CAST_OK;
     }
 
-    void HandleScriptEffect(SpellEffIndex)
+    void HandleTeleportEffect(SpellEffIndex effIndex)
     {
+        if (!IsWhistleCast())
+            return; // comportement par défaut de la Pierre de Foyer inchangé
+
         Player* player = GetCaster()->ToPlayer();
         if (!player)
             return;
 
+        PreventHitDefaultEffect(effIndex); // bloque le "retour au point de rappel"
         sFlightmasterWhistle->TeleportToNearestFlightmaster(player);
     }
 
-
     void Register() override
     {
-        OnCheckCast += SpellCheckCastFn(
-            spell_flightmaster_whistle_cast::CheckCast
-        );
+        OnCheckCast += SpellCheckCastFn(spell_flightmaster_whistle_cast::CheckCast);
         OnEffectHit += SpellEffectFn(
-            spell_flightmaster_whistle_cast::HandleScriptEffect,
+            spell_flightmaster_whistle_cast::HandleTeleportEffect,
             EFFECT_0,
-            SPELL_EFFECT_SCRIPT_EFFECT
+            SPELL_EFFECT_TELEPORT_UNITS // c'est l'effet réel du sort 8690, pas SCRIPT_EFFECT
         );
     }
 };
