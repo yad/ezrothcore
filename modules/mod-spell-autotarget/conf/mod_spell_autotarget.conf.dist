@@ -1,0 +1,55 @@
+#
+# Copyright (C) 2016+ AzerothCore <www.azerothcore.org>, released under GNU AGPL v3 license: https://github.com/azerothcore/azerothcore-wotlk/blob/master/LICENSE-AGPL3
+#
+
+[worldserver]
+
+########################################
+# mod-spell-autotarget configuration
+########################################
+#
+#    SpellAutoTarget.Enable
+#        Description: Active le repositionnement automatique de la destination
+#                      des sorts à ciblage au sol (ex: Blizzard) sur la cible
+#                      actuelle du lanceur, quel que soit l'endroit cliqué.
+#        Default:     1 - Activé
+#                     0 - Désactivé
+#
+
+SpellAutoTarget.Enable = 1
+
+#
+#    SpellAutoTarget.IncludeGuardians
+#        Description: Applique aussi le comportement aux sorts lancés par les
+#                      pets, familiers de chasseur, totems et autres gardiens
+#                      (pas seulement les joueurs).
+#        Default:     1 - Activé
+#                     0 - Désactivé (joueurs uniquement)
+#
+
+SpellAutoTarget.IncludeGuardians = 1
+
+#
+#    SpellAutoTarget.ExcludedSpells
+#        Description: Liste d'IDs de sorts (séparés par des virgules) à exclure
+#                      de ce comportement automatique, si certains sorts posent
+#                      problème ou doivent garder le ciblage manuel au sol.
+#        Default:     "" (aucune exclusion)
+#        Example:     SpellAutoTarget.ExcludedSpells = "10, 12470, 42208"
+#
+
+SpellAutoTarget.ExcludedSpells = ""
+
+#
+#    SpellAutoTarget.EnableCommand
+#        Description: Active la commande joueur ".groundcast <sort>" qui
+#                      lance directement un sort connu sur la cible actuelle
+#                      (ou sous les pieds du joueur si aucune cible),
+#                      sans passer par le réticule de ciblage au sol.
+#                      Le sort respecte toujours mana/temps de recharge/
+#                      portée/ligne de vue, comme un cast normal.
+#        Default:     1 - Activé
+#                     0 - Désactivé
+#
+
+SpellAutoTarget.EnableCommand = 1
