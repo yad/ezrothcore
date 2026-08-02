@@ -43,3 +43,6 @@
 [submodule "modules/mod-profession-experience"]
 	path = modules/mod-profession-experience
 	url = https://github.com/Tereneckla/mod-profession-experience.git
+[submodule "modules/mod-dalaran-hearthstone"]
+	path = modules/mod-dalaran-hearthstone
+	url = https://github.com/abracadaniel22/mod-dalaran-hearthstone
