@@ -28,6 +28,8 @@
 #include "ScriptMgr.h"
 #include "SpellInfo.h"
 #include "SpellMgr.h"
+#include "StringConvert.h"
+#include "Util.h"
 #include "mod_spell_autotarget_shared.h"
 
 using namespace Acore::ChatCommands;
@@ -35,6 +37,49 @@ using namespace Acore::ChatCommands;
 namespace
 {
     bool g_CommandEnabled = true;
+
+    std::string_view Trim(std::string_view sv)
+    {
+        while (!sv.empty() && std::isspace(static_cast<unsigned char>(sv.front())))
+            sv.remove_prefix(1);
+        while (!sv.empty() && std::isspace(static_cast<unsigned char>(sv.back())))
+            sv.remove_suffix(1);
+        return sv;
+    }
+
+    // Résout un sort connu du joueur à partir soit d'un ID numérique, soit
+    // d'un nom tapé en texte brut (recherche insensible à la casse, dans
+    // toutes les langues chargées par le serveur). Ne considère que les
+    // sorts réellement appris ET actifs (le rang le plus élevé connu),
+    // pour éviter d'ambiguïté entre plusieurs rangs partageant le même nom.
+    SpellInfo const* ResolveKnownSpell(Player* player, std::string_view arg)
+    {
+        arg = Trim(arg);
+        if (arg.empty())
+            return nullptr;
+
+        if (Optional<uint32> id = Acore::StringTo<uint32>(arg))
+            return sSpellMgr->GetSpellInfo(*id);
+
+        for (auto const& [spellId, playerSpell] : player->GetSpellMap())
+        {
+            if (!playerSpell || playerSpell->State == PLAYERSPELL_REMOVED || !playerSpell->Active)
+                continue;
+
+            SpellInfo const* candidate = sSpellMgr->GetSpellInfo(spellId);
+            if (!candidate)
+                continue;
+
+            for (uint8 locale = 0; locale < TOTAL_LOCALES; ++locale)
+            {
+                char const* name = candidate->SpellName[locale];
+                if (name && *name && StringEqualI(name, arg))
+                    return candidate;
+            }
+        }
+
+        return nullptr;
+    }
 }
 
 class SpellAutoTargetCommandWorldScript : public WorldScript
@@ -62,7 +107,7 @@ public:
         return commandTable;
     }
 
-    static bool HandleGroundCastCommand(ChatHandler* handler, SpellInfo const* spell)
+    static bool HandleGroundCastCommand(ChatHandler* handler, Tail spellArg)
     {
         if (!g_CommandEnabled)
         {
@@ -73,9 +118,11 @@ public:
 
         Player* player = handler->GetSession()->GetPlayer();
 
-        if (!spell || !SpellMgr::IsSpellValid(spell))
+        SpellInfo const* spell = ResolveKnownSpell(player, spellArg);
+
+        if (!spell)
         {
-            handler->SendSysMessage("Sort introuvable ou invalide.");
+            handler->SendSysMessage("Sort introuvable, ou vous ne connaissez pas ce sort.");
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -121,7 +168,7 @@ public:
 
         if (result != SPELL_CAST_OK)
         {
-            handler->PSendSysMessage("Impossible de lancer ce sort (code %u).", uint32(result));
+            // handler->PSendSysMessage("Impossible de lancer ce sort (code {}).", uint32(result));
             handler->SetSentErrorMessage(true);
             return false;
         }

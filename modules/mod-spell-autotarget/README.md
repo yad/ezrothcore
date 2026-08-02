@@ -25,6 +25,36 @@ réellement cliqué.
   lancés par leurs gardiens (pets, totems...), puisque le hook utilisé
   s'applique à n'importe quel `Unit`.
 
+## Relance gratuite (`RepeatCast`)
+
+Optionnel, désactivé par défaut. Relance automatiquement et gratuitement
+(sans mana) un sort listé, juste après la fin de son cast normal, pour un
+total configurable de lancers :
+
+```
+SpellAutoTarget.RepeatCast.Enable = 1
+SpellAutoTarget.RepeatCast.Count = 3
+SpellAutoTarget.RepeatCast.Spells = "42208"
+```
+
+Avec `Count = 3` : le joueur paie le mana une seule fois, et le sort se
+relance automatiquement 2 fois de plus gratuitement juste après, sur la
+même cible (ou sa position, pour un sort à ciblage au sol) — soit environ 3
+fois plus de dégâts totaux pour le même coût en mana.
+
+Chaque relance est un **cast complet et normal** : durée, son et animation
+d'origine intacts, donc pas de désynchronisation visuelle côté client. Le
+seul flag utilisé pour la relance est "ignorer le coût en mana/composant" —
+tout le reste (temps de canalisation, portée, ligne de vue) se comporte
+comme un cast normal.
+
+Le délai avant chaque relance est calculé sur la durée de canalisation
+réelle du sort (mods de durée et hâte inclus si applicables), ou son temps
+de lancement s'il n'est pas canalisé.
+
+C'est une liste blanche volontairement explicite (pas de "tous les sorts
+canalisés") pour éviter de relancer par erreur un sort qui ne s'y prête pas.
+
 ## Commande joueur : `.groundcast`
 
 Le module ajoute aussi une commande accessible à **tous les joueurs** (pas
@@ -34,6 +64,13 @@ besoin de droits GM) :
 .groundcast Blizzard
 .groundcast 42208
 ```
+
+Le nom peut être tapé directement en texte brut (recherche insensible à la
+casse, dans toutes les langues chargées par le serveur) — pas besoin de
+lien de sort ni de shift-clic. La recherche ne porte que sur les sorts que
+le joueur connaît réellement et qui sont actifs (le rang le plus élevé
+appris), pour éviter toute ambiguïté entre plusieurs rangs partageant le
+même nom.
 
 Une commande est traitée entièrement côté serveur : il n'y a donc **aucun
 réticule à cliquer**, contrairement au clic sur l'icône du sort. Le sort est

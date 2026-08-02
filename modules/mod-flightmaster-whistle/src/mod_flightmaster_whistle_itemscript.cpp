@@ -2,7 +2,7 @@
 #include "SpellScript.h"
 #include "SpellScriptLoader.h"
 #include "Player.h"
-#include "Item.h"
+#include "Map.h"
 #include "flightmaster_whistle.h"
 
 
@@ -16,10 +16,37 @@ class spell_flightmaster_whistle_cast : public SpellScript
 {
     PrepareSpellScript(spell_flightmaster_whistle_cast);
 
+    SpellCastResult CheckCast()
+    {
+        Player* player = GetCaster()->ToPlayer();
+        if (!player)
+            return SPELL_FAILED_DONT_REPORT;
+
+        if (!sFlightmasterWhistle->GetEnabled())
+            return SPELL_FAILED_NOT_HERE;
+
+        if (player->GetLevel() < sFlightmasterWhistle->GetMinPlayerLevel())
+            return SPELL_FAILED_LEVEL_REQUIREMENT;
+
+        if (!player->IsAlive())
+            return SPELL_FAILED_CASTER_DEAD;
+
+        if (player->IsInCombat())
+            return SPELL_FAILED_AFFECTING_COMBAT;
+
+        if (player->InArena())
+            return SPELL_FAILED_NOT_IN_ARENA;
+
+        Map* map = player->GetMap();
+        if (map && map->Instanceable())
+            return SPELL_FAILED_NOT_HERE;
+
+        return SPELL_CAST_OK;
+    }
+
     void HandleScriptEffect(SpellEffIndex)
     {
         Player* player = GetCaster()->ToPlayer();
-
         if (!player)
             return;
 
@@ -29,6 +56,9 @@ class spell_flightmaster_whistle_cast : public SpellScript
 
     void Register() override
     {
+        OnCheckCast += SpellCheckCastFn(
+            spell_flightmaster_whistle_cast::CheckCast
+        );
         OnEffectHit += SpellEffectFn(
             spell_flightmaster_whistle_cast::HandleScriptEffect,
             EFFECT_0,
@@ -37,36 +67,7 @@ class spell_flightmaster_whistle_cast : public SpellScript
     }
 };
 
-
-
-class item_flightmaster_whistle : public ItemScript
-{
-public:
-
-    item_flightmaster_whistle()
-        : ItemScript("flightmaster_whistle")
-    {
-    }
-
-
-    bool OnUse(Player* player, Item* item, SpellCastTargets const& targets) override
-    {
-        player->CastSpell(
-            player,
-            SPELL_FLIGHTMASTER_WHISTLE_CAST,
-            false,
-            item
-        );
-
-        return true;
-    }
-};
-
-
-
 void AddSC_mod_flightmaster_whistle_itemscript()
 {
     RegisterSpellScript(spell_flightmaster_whistle_cast);
-
-    new item_flightmaster_whistle();
 }

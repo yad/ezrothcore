@@ -53,3 +53,78 @@ SpellAutoTarget.ExcludedSpells = ""
 #
 
 SpellAutoTarget.EnableCommand = 1
+
+#
+#    SpellAutoTarget.RepeatCast.Enable
+#        Description: Relance automatiquement et gratuitement (sans mana) un
+#                      sort listé dans SpellAutoTarget.RepeatCast.Spells,
+#                      juste après la fin de son cast normal, pour un total
+#                      de SpellAutoTarget.RepeatCast.Count lancers. Chaque
+#                      lancer est un cast complet et normal (durée, son,
+#                      animation d'origine intacts) : pas de désynchronisation
+#                      visuelle côté client. C'est
+#                      l'approche recommandée pour multiplier les dégâts d'un
+#                      sort canalisé sans effet de bord visuel.
+#        Default:     0 - Désactivé
+#
+
+SpellAutoTarget.RepeatCast.Enable = 0
+
+#
+#    SpellAutoTarget.RepeatCast.Count
+#        Description: Nombre total de lancers (le premier payant + les
+#                      suivants gratuits). 3 = le cast normal + 2 relances
+#                      gratuites, donc environ 3 fois plus de dégâts totaux
+#                      pour le même coût en mana.
+#        Default:     3
+#
+
+SpellAutoTarget.RepeatCast.Count = 3
+
+#
+#    SpellAutoTarget.RepeatCast.Spells
+#        Description: Liste d'IDs de sorts (séparés par des virgules)
+#                      concernés par la relance gratuite.
+#        Default:     "" (aucun sort concerné)
+#        Example:     SpellAutoTarget.RepeatCast.Spells = "42208"
+#
+# RepeatCast spell list (WotLK 3.3.5a)
+#
+# Blizzard
+#   Rank 1 = 10
+#   Rank 2 = 6141
+#   Rank 3 = 8427
+#   Rank 4 = 10185
+#   Rank 5 = 10186
+#   Rank 6 = 10187
+#   Rank 7 = 27085
+#   Rank 8 = 42939
+#   Rank 9 = 42940
+#
+# Rain of Fire
+#   Rank 1 = 5740
+#   Rank 2 = 6219
+#   Rank 3 = 11677
+#   Rank 4 = 11678
+#   Rank 5 = 19474
+#   Rank 6 = 27212
+#   Rank 7 = 47819
+#   Rank 8 = 47820
+#
+# Hurricane
+#   Rank 1 = 16914
+#   Rank 2 = 17401
+#   Rank 3 = 17402
+#   Rank 4 = 27012
+#   Rank 5 = 48467
+#
+# Volley
+#   Rank 1 = 1510
+#   Rank 2 = 14294
+#   Rank 3 = 14295
+#   Rank 4 = 27022
+#   Rank 5 = 58431
+#   Rank 6 = 58434
+#
+
+SpellAutoTarget.RepeatCast.Spells = "10, 6141, 8427, 10185, 10186, 10187, 27085, 42939, 42940, 5740, 6219, 11677, 11678, 19474, 27212, 47819, 47820, 16914, 17401, 17402, 27012, 48467, 1510, 14294, 14295, 27022, 58431, 58434"

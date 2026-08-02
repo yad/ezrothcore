@@ -26,8 +26,7 @@ INSERT INTO `item_template`
     `spellcharges_1`,
     `spellcooldown_1`,
     `bonding`,
-    `description`,
-    `ScriptName`
+    `description`
 )
 VALUES
 (
@@ -54,8 +53,7 @@ VALUES
     0,
     -1,
     1,
-    'Teleports you to the nearest flightmaster.',
-    'flightmaster_whistle'
+    'Teleports you to the nearest flightmaster.'
 );
 
 
@@ -133,7 +131,7 @@ VALUES
 (
     110001,
     1,
-    7,
+    1,
     900000,
     0,
     1,
