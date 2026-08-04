@@ -25,6 +25,7 @@ public:
 
 	void LoadFlightmasters();
 	void TeleportToNearestFlightmaster(Player* player) const;
+    bool HasNearestFlightmaster(const Player* player) const;
 
 	void SetEnabled(bool enabled);
 	bool GetEnabled() const;

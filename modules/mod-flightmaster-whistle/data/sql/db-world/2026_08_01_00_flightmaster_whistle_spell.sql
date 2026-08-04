@@ -25,6 +25,8 @@ INSERT INTO `item_template`
     `spelltrigger_1`,
     `spellcharges_1`,
     `spellcooldown_1`,
+    `spellcategory_1`,
+    `spellcategorycooldown_1`,
     `bonding`,
     `description`
 )
@@ -48,19 +50,19 @@ VALUES
     0,
     1,
     1,
-    8690,   -- sort Pierre de Foyer réutilisé, filtré côté script sur l'entry de l'objet
+    54401,
     0,
     0,
-    -1,
+    900000,
+    60000,
+    900000,
     1,
     'Teleports you to the nearest flightmaster.'
 );
 
-
-
 -- SPELL SCRIPT
 DELETE FROM `spell_script_names`
-WHERE `spell_id` = 8690
+WHERE `spell_id` = 54401
 AND `ScriptName` = 'spell_flightmaster_whistle_cast';
 
 INSERT INTO `spell_script_names`
@@ -70,11 +72,9 @@ INSERT INTO `spell_script_names`
 )
 VALUES
 (
-    8690,
+    54401,
     'spell_flightmaster_whistle_cast'
 );
-
-
 
 -- LOCALE ITEM
 DELETE FROM `item_template_locale`

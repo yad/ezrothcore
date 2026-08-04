@@ -94,6 +94,11 @@ void FlightmasterWhistle::TeleportToNearestFlightmaster(Player* player) const
         timerMap[player->GetGUID().GetCounter()] = currentTime;
 }
 
+bool FlightmasterWhistle::HasNearestFlightmaster(const Player* player) const
+{
+    return ChooseNearestSpawnInfo(player) != nullptr;
+}
+
 /*static*/ std::unordered_map<uint32, uint32> FlightmasterWhistle::timerMap;
 
 /*static*/ void FlightmasterWhistle::SendPlayerMessage(const Player* player, const std::string& message)
