@@ -16,9 +16,6 @@
 [submodule "modules/mod-gain-honor-guard"]
 	path = modules/mod-gain-honor-guard
 	url = https://github.com/azerothcore/mod-gain-honor-guard.git
-[submodule "modules/mod-random-enchants"]
-	path = modules/mod-random-enchants
-	url = https://github.com/azerothcore/mod-random-enchants.git
 [submodule "modules/mod-solo-lfg"]
 	path = modules/mod-solo-lfg
 	url = https://github.com/azerothcore/mod-solo-lfg.git
