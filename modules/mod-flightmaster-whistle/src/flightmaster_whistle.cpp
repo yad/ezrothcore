@@ -84,11 +84,11 @@ void FlightmasterWhistle::TeleportToNearestFlightmaster(Player* player) const
 
     if (lastTime > 0 && diff < GetTimer() && !player->IsGameMaster())
     {
-        SendPlayerMessage(player, "Please try again in " + FlightmasterWhistle::FormatTimer(GetTimer() - diff) + ".");
+        SendPlayerMessage(player, "Veuillez réessayer dans " + FlightmasterWhistle::FormatTimer(GetTimer() - diff) + ".");
         return;
     }
 
-    SendPlayerMessage(player, "Teleporting to nearest flightmaster...");
+    SendPlayerMessage(player, "Téléportation vers le maître de vol le plus proche...");
 
     if (HandleTeleport(player))
         timerMap[player->GetGUID().GetCounter()] = currentTime;
@@ -120,37 +120,37 @@ bool FlightmasterWhistle::HandleTeleport(Player* player) const
 
     if (!GetEnabled())
     {
-        SendPlayerMessage(player, "Can't do this yet.");
+        SendPlayerMessage(player, "Impossible pour l'instant.");
         return false;
     }
 
     if (player->GetLevel() < GetMinPlayerLevel())
     {
-        SendPlayerMessage(player, "You need to be at least level " + Acore::ToString(GetMinPlayerLevel()) + " to use this.");
+        SendPlayerMessage(player, "Vous devez être au moins niveau " + Acore::ToString(GetMinPlayerLevel()) + " pour utiliser ceci.");
         return false;
     }
 
     if (!player->IsAlive())
     {
-        SendPlayerMessage(player, "Can't do this while dead.");
+        SendPlayerMessage(player, "Impossible de faire cela en étant mort.");
         return false;
     }
 
     if (player->IsInCombat())
     {
-        SendPlayerMessage(player, "Can't do this while in combat.");
+        SendPlayerMessage(player, "Impossible de faire cela pendant un combat.");
         return false;
     }
 
     if (EnemiesNearby(player))
     {
-        SendPlayerMessage(player, "Can't do this while enemy players are nearby.");
+        SendPlayerMessage(player, "Impossible de faire cela tant que des joueurs ennemis sont à proximité.");
         return false;
     }
 
     if (player->InArena())
     {
-        SendPlayerMessage(player, "Can't do this while in arena.");
+        SendPlayerMessage(player, "Impossible de faire cela dans une arène.");
         return false;
     }
 
@@ -158,14 +158,14 @@ bool FlightmasterWhistle::HandleTeleport(Player* player) const
     ASSERT(map != nullptr);
     if (map->Instanceable())
     {
-        SendPlayerMessage(player, "Can't do this while in an instanced area.");
+        SendPlayerMessage(player, "Impossible de faire cela dans une zone instanciée.");
         return false;
     }
 
     const CreatureSpawnInfo* nearestFm = ChooseNearestSpawnInfo(player);
     if (nearestFm == nullptr)
     {
-        SendPlayerMessage(player, "No flightmaster found in your current area.");
+        SendPlayerMessage(player, "Aucun maître de vol trouvé dans votre zone actuelle.");
         return false;
     }
 
