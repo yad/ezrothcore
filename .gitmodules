@@ -38,3 +38,6 @@
 	path = modules/mod-profession-experience
 	url = https://github.com/Tereneckla/mod-profession-experience.git
 
+[submodule "modules/mod-auto-resurrect"]
+	path = modules/mod-auto-resurrect
+	url = https://github.com/Elmegaard/mod-auto-resurrect.git
