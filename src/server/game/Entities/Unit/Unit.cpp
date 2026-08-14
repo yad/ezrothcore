@@ -16085,6 +16085,7 @@ void Unit::RewardRage(uint32 damage, uint32 weaponSpeedHitFactor, bool attacker)
     }
 
     addRage *= sWorld->getRate(RATE_POWER_RAGE_INCOME);
+    addRage /= sWorld->getRate(RATE_REGEN_POWER_RAGE_INCOME);
 
     ModifyPower(POWER_RAGE, uint32(addRage * 10));
 }

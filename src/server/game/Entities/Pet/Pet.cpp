@@ -707,11 +707,13 @@ void Pet::Update(uint32 diff)
                 // xinef: just check if we can update focus in current period
                 if (getPowerType() == POWER_FOCUS)
                 {
+                    float focusRate = sWorld->getRate(RATE_REGEN_POWER_FOCUS);
+                    uint32 focusInterval = std::max<uint32>(1u, uint32(float(PET_FOCUS_REGEN_INTERVAL.count()) / focusRate));
                     m_petRegenTimer -= _diff;
                     if (m_petRegenTimer <= 0ms)
                     {
-                        m_petRegenTimer += PET_FOCUS_REGEN_INTERVAL;
-                        Regenerate(POWER_FOCUS);
+                        m_petRegenTimer += Milliseconds(focusInterval);
+                        Regenerate(POWER_FOCUS, focusInterval);
                     }
                 }
 

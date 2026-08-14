@@ -1623,9 +1623,9 @@ public:
     void SendTalentWipeConfirm(ObjectGuid guid);
     void ResetPetTalents();
     void RegenerateAll();
-    void Regenerate(Powers power);
-    void RegenerateHealth();
-    void setRegenTimerCount(uint32 time) {m_regenTimerCount = time;}
+    void Regenerate(Powers power, uint32 regenIntervalHint = 0);
+    void RegenerateHealth(float scale = 1.0f);
+    void setRegenTimerCount(uint32 time);
     void setWeaponChangeTimer(uint32 time) {m_weaponChangeTimer = time;}
 
     [[nodiscard]] uint32 GetMoney() const { return GetUInt32Value(PLAYER_FIELD_COINAGE); }
@@ -2726,6 +2726,9 @@ protected:
 
     uint32 m_AreaID;
     uint32 m_regenTimerCount;
+    uint32 m_regenHealthTimer;
+    uint32 m_regenRageTimer;
+    uint32 m_regenRunicTimer;
     uint32 m_foodEmoteTimerCount;
     float m_powerFraction[MAX_POWERS];
     uint32 m_contestedPvPTimer;

@@ -2236,6 +2236,34 @@ Rate.Energy            = 1
 Rate.Loyalty           = 1
 
 #
+#    Rate.Regen.Health
+#    Rate.Regen.Rage.Loss
+#    Rate.Regen.RunicPower.Loss
+#        Description: Regen frequency multiplier. Higher values make regeneration tick more
+#                     often in smaller increments, producing a smoother visual effect.
+#                     Each tick amount is scaled down proportionally so total regen per 2s
+#                     stays the same. Value of 4 means 4 ticks per 2s instead of 1.
+#        Default:     1 - (Rate.Regen.Health)
+#                     1 - (Rate.Regen.Mana)
+#                     1 - (Rate.Regen.Rage.Income)
+#                     1 - (Rate.Regen.Rage.Loss)
+#                     1 - (Rate.Regen.RunicPower.Income)
+#                     1 - (Rate.Regen.RunicPower.Loss)
+#                     1 - (Rate.Regen.Energy)
+#                     1 - (Rate.Regen.Focus)
+#                     1 - (Rate.Regen.Runes)
+
+Rate.Regen.Health         = 1
+Rate.Regen.Mana           = 1
+Rate.Regen.Rage.Income    = 1
+Rate.Regen.Rage.Loss      = 1
+Rate.Regen.RunicPower.Income = 1
+Rate.Regen.RunicPower.Loss = 1
+Rate.Regen.Energy         = 1
+Rate.Regen.Focus          = 1
+Rate.Regen.Runes          = 1
+
+#
 #    Rate.Rest.InGame
 #    Rate.Rest.Offline.InTavernOrCity
 #    Rate.Rest.Offline.InWilderness

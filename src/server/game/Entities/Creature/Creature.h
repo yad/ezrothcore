@@ -488,7 +488,7 @@ protected:
 
     ReactStates m_reactState;                           // for AI, not charmInfo
     void RegenerateHealth();
-    void Regenerate(Powers power);
+    void Regenerate(Powers power, uint32 regenInterval = 0);
     MovementGeneratorType m_defaultMovementType;
     ObjectGuid::LowType m_spawnId;                      ///< For new or temporary creatures is 0 for saved it is lowguid
     uint8 m_equipmentId;
@@ -499,6 +499,7 @@ protected:
     bool m_AlreadySearchedAssistance;
     bool m_regenHealth;
     bool m_regenPower;
+    int32 m_powerRegenTimer;  // independent per-type power regen timer
     bool m_AI_locked;
 
     SpellSchoolMask m_meleeDamageSchoolMask;

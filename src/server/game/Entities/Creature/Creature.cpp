@@ -267,6 +267,7 @@ Creature::Creature(): Unit(), MovableMapObject(), m_groupLootTimer(0), lootingGr
     _isMissingSwimmingFlagOutOfCombat(false), m_assistanceTimer(0), _playerDamageReq(0), _damagedByPlayer(false), _highestPlayerAttackerLevel(0), _isCombatMovementAllowed(true)
 {
     m_regenTimer = CREATURE_REGEN_INTERVAL;
+    m_powerRegenTimer = CREATURE_REGEN_INTERVAL;
     m_valuesCount = UNIT_END;
 
     for (uint8 i = 0; i < MAX_CREATURE_SPELLS; ++i)
@@ -912,12 +913,27 @@ void Creature::Update(uint32 diff)
                     }
                 }
 
-                if (getPowerType() == POWER_ENERGY)
-                    Regenerate(POWER_ENERGY);
-                else
-                    Regenerate(POWER_MANA);
-
                 m_regenTimer += CREATURE_REGEN_INTERVAL;
+            }
+
+            // Smooth power regeneration (independent per-type timer)
+            m_powerRegenTimer -= (int32)diff;
+            if (m_powerRegenTimer <= 0)
+            {
+                uint32 interval;
+                if (getPowerType() == POWER_ENERGY)
+                {
+                    float rate = sWorld->getRate(RATE_REGEN_POWER_ENERGY);
+                    interval = std::max<uint32>(1u, uint32(float(CREATURE_REGEN_INTERVAL) / rate));
+                    Regenerate(POWER_ENERGY, interval);
+                }
+                else
+                {
+                    float rate = sWorld->getRate(RATE_REGEN_POWER_MANA);
+                    interval = std::max<uint32>(1u, uint32(float(CREATURE_REGEN_INTERVAL) / rate));
+                    Regenerate(POWER_MANA, interval);
+                }
+                m_powerRegenTimer += (int32)interval;
             }
 
             // Evade timer is now handled by CombatManager::Update() which calls UnitAI::EvadeTimerExpired()
@@ -968,7 +984,7 @@ bool Creature::IsFreeToMove()
     return true;
 }
 
-void Creature::Regenerate(Powers power)
+void Creature::Regenerate(Powers power, uint32 regenInterval)
 {
     uint32 curValue = GetPower(power);
     uint32 maxValue = GetMaxPower(power);
@@ -985,6 +1001,12 @@ void Creature::Regenerate(Powers power)
     if (curValue >= maxValue)
         return;
 
+    // Use the caller-supplied interval; fall back to the appropriate base interval per power type.
+    uint32 baseInterval = (power == POWER_FOCUS) ? (uint32)PET_FOCUS_REGEN_INTERVAL.count() : CREATURE_REGEN_INTERVAL;
+    if (regenInterval == 0)
+        regenInterval = baseInterval;
+    float intervalScale = float(regenInterval) / float(baseInterval);
+
     float addvalue = 0.0f;
 
     switch (power)
@@ -992,13 +1014,13 @@ void Creature::Regenerate(Powers power)
         case POWER_FOCUS:
             {
                 // For hunter pets.
-                addvalue = 24 * sWorld->getRate(RATE_POWER_FOCUS);
+                addvalue = 24 * sWorld->getRate(RATE_POWER_FOCUS) * intervalScale;
                 break;
             }
         case POWER_ENERGY:
             {
                 // For deathknight's ghoul.
-                addvalue = 20;
+                addvalue = 20 * intervalScale;
                 break;
             }
         case POWER_MANA:
@@ -1008,18 +1030,18 @@ void Creature::Regenerate(Powers power)
                 {
                     if (GetEntry() == NPC_IMP || GetEntry() == NPC_WATER_ELEMENTAL_TEMP || GetEntry() == NPC_WATER_ELEMENTAL_PERM)
                     {
-                        addvalue = uint32((GetStat(STAT_SPIRIT) / (IsUnderLastManaUseEffect() ? 8.0f : 5.0f) + 17.0f));
+                        addvalue = uint32((GetStat(STAT_SPIRIT) / (IsUnderLastManaUseEffect() ? 8.0f : 5.0f) + 17.0f) * intervalScale);
                     }
                     else if (!IsUnderLastManaUseEffect())
                     {
                         float ManaIncreaseRate = sWorld->getRate(RATE_POWER_MANA);
                         float Spirit = GetStat(STAT_SPIRIT);
 
-                        addvalue = uint32((Spirit / 5.0f + 17.0f) * ManaIncreaseRate);
+                        addvalue = uint32((Spirit / 5.0f + 17.0f) * ManaIncreaseRate * intervalScale);
                     }
                 }
                 else
-                    addvalue = maxValue / 3;
+                    addvalue = maxValue / 3 * intervalScale;
                 break;
             }
         default:
@@ -1029,7 +1051,7 @@ void Creature::Regenerate(Powers power)
     // Apply modifiers (if any).
     addvalue *= GetTotalAuraMultiplierByMiscValue(SPELL_AURA_MOD_POWER_REGEN_PERCENT, power);
 
-    addvalue += GetTotalAuraModifierByMiscValue(SPELL_AURA_MOD_POWER_REGEN, power) * (power == POWER_FOCUS ? PET_FOCUS_REGEN_INTERVAL.count() : CREATURE_REGEN_INTERVAL) / (5 * IN_MILLISECONDS);
+    addvalue += GetTotalAuraModifierByMiscValue(SPELL_AURA_MOD_POWER_REGEN, power) * regenInterval / (5 * IN_MILLISECONDS);
 
     ModifyPower(power, int32(addvalue));
 }

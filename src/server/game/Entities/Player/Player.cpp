@@ -185,6 +185,9 @@ Player::Player(WorldSession* session): Unit(), m_mover(this), _cinematicMgr(*thi
 
     m_regenTimer = 0;
     m_regenTimerCount = 0;
+    m_regenHealthTimer = 0;
+    m_regenRageTimer = 0;
+    m_regenRunicTimer = 0;
     m_foodEmoteTimerCount = 0;
     m_weaponChangeTimer = 0;
 
@@ -1803,6 +1806,9 @@ void Player::RegenerateAll()
 
     m_regenTimerCount += m_regenTimer;
     m_foodEmoteTimerCount += m_regenTimer;
+    m_regenHealthTimer += m_regenTimer;
+    m_regenRageTimer += m_regenTimer;
+    m_regenRunicTimer += m_regenTimer;
 
     Regenerate(POWER_ENERGY);
 
@@ -1810,40 +1816,69 @@ void Player::RegenerateAll()
 
     // Runes act as cooldowns, and they don't need to send any data
     if (IsClass(CLASS_DEATH_KNIGHT, CLASS_CONTEXT_ABILITY))
+    {
+        int32 runeDecrement = int32(float(m_regenTimer) * sWorld->getRate(RATE_REGEN_POWER_RUNES));
         for (uint8 i = 0; i < MAX_RUNES; ++i)
         {
             // xinef: implement grace
             if (int32 cd = GetRuneCooldown(i))
             {
-                SetRuneCooldown(i, (cd > m_regenTimer) ? cd - m_regenTimer : 0);
+                SetRuneCooldown(i, (cd > runeDecrement) ? cd - runeDecrement : 0);
                 // start grace counter, player must be in combat and rune has to go off cooldown
-                if (IsInCombat() && cd <= m_regenTimer)
-                    SetGracePeriod(i, m_regenTimer - cd + 1); // added 1 because m_regenTimer-cd can be equal 0
+                if (IsInCombat() && cd <= runeDecrement)
+                    SetGracePeriod(i, runeDecrement - cd + 1); // added 1 because runeDecrement-cd can be equal 0
             }
             // xinef: if grace is started, increase it but no more than cap
             else if (uint32 grace = GetGracePeriod(i))
             {
                 if (grace < RUNE_GRACE_PERIOD)
-                    SetGracePeriod(i, std::min<uint32>(grace + m_regenTimer, RUNE_GRACE_PERIOD));
+                    SetGracePeriod(i, std::min<uint32>(grace + runeDecrement, RUNE_GRACE_PERIOD));
             }
         }
+    }
+
+    // Smooth health regeneration (fires at configurable rate, independently of other timers)
+    {
+        float healthRate = sWorld->getRate(RATE_REGEN_HEALTH);
+        uint32 healthInterval = std::max<uint32>(1u, uint32(2000.0f / healthRate));
+        if (m_regenHealthTimer >= healthInterval)
+        {
+            // Not in combat or they have regeneration
+            if (!IsInCombat() || IsPolymorphed() || m_baseHealthRegen ||
+                    HasRegenDuringCombatAura() ||
+                    HasHealthRegenInCombatAura())
+            {
+                RegenerateHealth(1.0f / healthRate);
+            }
+            m_regenHealthTimer -= healthInterval;
+        }
+    }
+
+    // Smooth rage regeneration
+    {
+        float rageRate = sWorld->getRate(RATE_REGEN_POWER_RAGE_LOSS);
+        uint32 rageInterval = std::max<uint32>(1u, uint32(2000.0f / rageRate));
+        if (m_regenRageTimer >= rageInterval)
+        {
+            Regenerate(POWER_RAGE, rageInterval);
+            m_regenRageTimer -= rageInterval;
+        }
+    }
+
+    // Smooth runic power regeneration
+    if (IsClass(CLASS_DEATH_KNIGHT, CLASS_CONTEXT_ABILITY))
+    {
+        float runicRate = sWorld->getRate(RATE_REGEN_POWER_RUNICPOWER_LOSS);
+        uint32 runicInterval = std::max<uint32>(1u, uint32(2000.0f / runicRate));
+        if (m_regenRunicTimer >= runicInterval)
+        {
+            Regenerate(POWER_RUNIC_POWER, runicInterval);
+            m_regenRunicTimer -= runicInterval;
+        }
+    }
 
     if (m_regenTimerCount >= 2000)
-    {
-        // Not in combat or they have regeneration
-        if (!IsInCombat() || IsPolymorphed() || m_baseHealthRegen ||
-                HasRegenDuringCombatAura() ||
-                HasHealthRegenInCombatAura())
-        {
-            RegenerateHealth();
-        }
-
-        Regenerate(POWER_RAGE);
-        if (IsClass(CLASS_DEATH_KNIGHT, CLASS_CONTEXT_ABILITY))
-            Regenerate(POWER_RUNIC_POWER);
-
         m_regenTimerCount -= 2000;
-    }
 
     m_regenTimer = 0;
 
@@ -1879,7 +1914,7 @@ void Player::RegenerateAll()
     }
 }
 
-void Player::Regenerate(Powers power)
+void Player::Regenerate(Powers power, uint32 regenIntervalHint)
 {
     uint32 maxValue = GetMaxPower(power);
     if (!maxValue)
@@ -1930,7 +1965,8 @@ void Player::Regenerate(Powers power)
                 if (!IsInCombat() && !HasInterruptRegenAura())
                 {
                     float RageDecreaseRate = sWorld->getRate(RATE_POWER_RAGE_LOSS);
-                    addvalue += -20 * RageDecreaseRate;               // 2 rage by tick (= 2 seconds => 1 rage/sec)
+                    float intervalScale = (regenIntervalHint > 0) ? float(regenIntervalHint) / 2000.0f : 1.0f;
+                    addvalue += -20 * RageDecreaseRate * intervalScale;  // 2 rage by tick (= 2 seconds => 1 rage/sec)
                 }
             }
             break;
@@ -1949,7 +1985,8 @@ void Player::Regenerate(Powers power)
                 if (!IsInCombat() && !HasInterruptRegenAura())
                 {
                     float RunicPowerDecreaseRate = sWorld->getRate(RATE_POWER_RUNICPOWER_LOSS);
-                    addvalue += -30 * RunicPowerDecreaseRate;         // 3 RunicPower by tick
+                    float intervalScale = (regenIntervalHint > 0) ? float(regenIntervalHint) / 2000.0f : 1.0f;
+                    addvalue += -30 * RunicPowerDecreaseRate * intervalScale;         // 3 RunicPower by tick
                 }
             }
             break;
@@ -1968,9 +2005,10 @@ void Player::Regenerate(Powers power)
     {
         addvalue *= GetTotalAuraMultiplierByMiscValue(SPELL_AURA_MOD_POWER_REGEN_PERCENT, power);
 
+        uint32 effectiveInterval = (regenIntervalHint > 0) ? regenIntervalHint : m_regenTimerCount;
         // Butchery requires combat for this effect
         if (power != POWER_RUNIC_POWER || IsInCombat())
-            addvalue += float(GetTotalAuraModifierByMiscValue(SPELL_AURA_MOD_POWER_REGEN, power) * ((power != POWER_ENERGY) ? m_regenTimerCount : m_regenTimer)) / (5.0f * IN_MILLISECONDS);
+            addvalue += float(GetTotalAuraModifierByMiscValue(SPELL_AURA_MOD_POWER_REGEN, power) * effectiveInterval) / (5.0f * IN_MILLISECONDS);
     }
 
     if (addvalue < 0.0f)
@@ -2015,13 +2053,13 @@ void Player::Regenerate(Powers power)
             m_powerFraction[power] = addvalue - integerValue;
     }
 
-    if (m_regenTimerCount >= 2000 || curValue == 0 || curValue == maxValue)
+    if (m_regenTimerCount >= 2000 || regenIntervalHint > 0 || curValue == 0 || curValue == maxValue)
         SetPower(power, curValue, true, true);
     else
         UpdateUInt32Value(UNIT_FIELD_POWER1 + AsUnderlyingType(power), curValue);
 }
 
-void Player::RegenerateHealth()
+void Player::RegenerateHealth(float scale)
 {
     uint32 curValue = GetHealth();
     uint32 maxValue = GetMaxHealth();
@@ -2038,11 +2076,11 @@ void Player::RegenerateHealth()
 
     // polymorphed case
     if (IsPolymorphed())
-        addvalue = (float)GetMaxHealth() / 3;
+        addvalue = (float)GetMaxHealth() / 3 * scale;
     // normal regen case (maybe partly in combat case)
     else if (!IsInCombat() || HasRegenDuringCombatAura())
     {
-        addvalue = OCTRegenHPPerSpirit() * HealthIncreaseRate;
+        addvalue = OCTRegenHPPerSpirit() * HealthIncreaseRate * scale;
 
         if (!IsStandState())
         {
@@ -2053,7 +2091,7 @@ void Player::RegenerateHealth()
 
         if (!IsInCombat())
         {
-            addvalue += GetTotalAuraModifier(SPELL_AURA_MOD_REGEN) * 2 * IN_MILLISECONDS / (5 * IN_MILLISECONDS);
+            addvalue += GetTotalAuraModifier(SPELL_AURA_MOD_REGEN) * 2 * IN_MILLISECONDS * scale / (5 * IN_MILLISECONDS);
         }
         else if (HasRegenDuringCombatAura())
         {
@@ -2062,13 +2100,23 @@ void Player::RegenerateHealth()
     }
 
     // always regeneration bonus (including combat)
-    addvalue += GetTotalAuraModifier(SPELL_AURA_MOD_HEALTH_REGEN_IN_COMBAT);
-    addvalue += m_baseHealthRegen / 2.5f;
+    addvalue += GetTotalAuraModifier(SPELL_AURA_MOD_HEALTH_REGEN_IN_COMBAT) * scale;
+    addvalue += m_baseHealthRegen / 2.5f * scale;
 
     if (addvalue < 0)
         addvalue = 0;
 
     ModifyHealth(int32(addvalue));
+}
+
+void Player::setRegenTimerCount(uint32 time)
+{
+    m_regenTimerCount = time;
+    // Adjust the per-type health timer proportionally so polymorph and similar effects
+    // that call this to schedule an early regen tick still fire at the right relative time.
+    float healthRate = sWorld->getRate(RATE_REGEN_HEALTH);
+    uint32 healthInterval = std::max<uint32>(1u, uint32(2000.0f / healthRate));
+    m_regenHealthTimer = uint32(float(time) * float(healthInterval) / 2000.0f);
 }
 
 void Player::ResetAllPowers()
