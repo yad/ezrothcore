@@ -90,7 +90,7 @@ public:
             sConfigMgr->GetOption<float>("PlayerBoost.CastSpeedBonus", 0.0f);
 
         sPetCastSpeedBonus =
-            sConfigMgr->GetOption<float>("PlayerBoost.sPetCastSpeedBonus", 0.0f);
+            sConfigMgr->GetOption<float>("PlayerBoost.PetCastSpeedBonus", 0.0f);
     }
 };
 
