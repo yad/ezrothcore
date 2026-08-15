@@ -3,7 +3,7 @@ services:
   ac-database:
     volumes:
       - ./mysql/my.cnf:/etc/mysql/conf.d/playerbots.cnf:ro
-      
+
   ac-worldserver:
     restart: "no"
     environment:
@@ -26,6 +26,6 @@ services:
     depends_on:
       - ac-database
       - ac-authserver
-      
+
   ac-client-data-init:
-    command: ["sh", "-c", "echo bye"]      
+    command: ["sh", "-c", "echo bye"]

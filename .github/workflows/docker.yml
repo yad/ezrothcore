@@ -1,0 +1,113 @@
+name: Docker Images
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: docker.io
+  IMAGE_PREFIX: clem007/ezrothcore
+
+jobs:
+  build:
+    name: Build ${{ matrix.name }} (${{ matrix.platform }})
+    runs-on: ${{ matrix.platform == 'linux/arm64' && 'ubuntu-26.04-arm' || 'ubuntu-latest' }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: authserver,   platform: linux/amd64, context: .,        dockerfile: ./apps/docker/Dockerfile, target: authserver,  cache_scope: azerothcore }
+          - { name: authserver,   platform: linux/arm64, context: .,        dockerfile: ./apps/docker/Dockerfile, target: authserver,  cache_scope: azerothcore }
+          - { name: worldserver,  platform: linux/amd64, context: .,        dockerfile: ./apps/docker/Dockerfile, target: worldserver, cache_scope: azerothcore }
+          - { name: worldserver,  platform: linux/arm64, context: .,        dockerfile: ./apps/docker/Dockerfile, target: worldserver, cache_scope: azerothcore }
+          - { name: db-import,    platform: linux/amd64, context: .,        dockerfile: ./apps/docker/Dockerfile, target: db-import,   cache_scope: azerothcore }
+          - { name: db-import,    platform: linux/arm64, context: .,        dockerfile: ./apps/docker/Dockerfile, target: db-import,   cache_scope: azerothcore }
+          - { name: tools,        platform: linux/amd64, context: .,        dockerfile: ./apps/docker/Dockerfile, target: tools,       cache_scope: azerothcore }
+          - { name: tools,        platform: linux/arm64, context: .,        dockerfile: ./apps/docker/Dockerfile, target: tools,       cache_scope: azerothcore }
+          - { name: watcher,      platform: linux/amd64, context: ./watcher, dockerfile: ./watcher/Dockerfile,    target: "",           cache_scope: watcher }
+          - { name: watcher,      platform: linux/arm64, context: ./watcher, dockerfile: ./watcher/Dockerfile,    target: "",           cache_scope: watcher }
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Prepare platform tag
+        run: echo "PLATFORM_TAG=$(echo ${{ matrix.platform }} | tr '/' '-')" >> "$GITHUB_ENV"
+
+      - name: Build and push by digest
+        id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          target: ${{ matrix.target }}
+          platforms: ${{ matrix.platform }}
+          cache-from: type=gha,scope=build-${{ matrix.cache_scope }}-${{ env.PLATFORM_TAG }}
+          cache-to: type=gha,mode=max,scope=build-${{ matrix.cache_scope }}-${{ env.PLATFORM_TAG }}
+          outputs: type=image,name=${{ env.IMAGE_PREFIX }}-${{ matrix.name }},push-by-digest=true,name-canonical=true,push=true
+
+      - name: Export digest
+        run: |
+          mkdir -p /tmp/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ matrix.name }}-${{ env.PLATFORM_TAG }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge:
+    name: Merge manifest for ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    needs: build
+    strategy:
+      matrix:
+        name: [authserver, worldserver, db-import, tools, watcher]
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/digests
+          pattern: digests-${{ matrix.name }}-*
+          merge-multiple: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Create multi-arch manifest and push
+        working-directory: /tmp/digests
+        run: |
+          docker buildx imagetools create \
+            -t ${{ env.IMAGE_PREFIX }}-${{ matrix.name }}:latest \
+            -t ${{ env.IMAGE_PREFIX }}-${{ matrix.name }}:${{ github.sha }} \
+            $(printf '${{ env.IMAGE_PREFIX }}-${{ matrix.name }}@sha256:%s ' *)
+
+      - name: Inspect image
+        run: |
+          docker buildx imagetools inspect ${{ env.IMAGE_PREFIX }}-${{ matrix.name }}:latest
