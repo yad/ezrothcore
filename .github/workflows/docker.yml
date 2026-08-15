@@ -13,30 +13,32 @@ concurrency:
 env:
   REGISTRY: docker.io
   IMAGE_PREFIX: clem007/ezrothcore
+  RUNNER_UBUNTU_AMD64: ubuntu-24.04
+  RUNNER_UBUNTU_ARM64: ubuntu-24.04-arm
 
 jobs:
   build:
     name: Build ${{ matrix.name }} (${{ matrix.platform }})
-    runs-on: ${{ matrix.platform == 'linux/arm64' && 'ubuntu-26.04-arm' || 'ubuntu-latest' }}
+    runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { name: authserver,   platform: linux/amd64, context: .,        dockerfile: ./apps/docker/Dockerfile, target: authserver,  cache_scope: azerothcore }
-          - { name: authserver,   platform: linux/arm64, context: .,        dockerfile: ./apps/docker/Dockerfile, target: authserver,  cache_scope: azerothcore }
-          - { name: worldserver,  platform: linux/amd64, context: .,        dockerfile: ./apps/docker/Dockerfile, target: worldserver, cache_scope: azerothcore }
-          - { name: worldserver,  platform: linux/arm64, context: .,        dockerfile: ./apps/docker/Dockerfile, target: worldserver, cache_scope: azerothcore }
-          - { name: db-import,    platform: linux/amd64, context: .,        dockerfile: ./apps/docker/Dockerfile, target: db-import,   cache_scope: azerothcore }
-          - { name: db-import,    platform: linux/arm64, context: .,        dockerfile: ./apps/docker/Dockerfile, target: db-import,   cache_scope: azerothcore }
-          - { name: tools,        platform: linux/amd64, context: .,        dockerfile: ./apps/docker/Dockerfile, target: tools,       cache_scope: azerothcore }
-          - { name: tools,        platform: linux/arm64, context: .,        dockerfile: ./apps/docker/Dockerfile, target: tools,       cache_scope: azerothcore }
-          - { name: watcher,      platform: linux/amd64, context: ./watcher, dockerfile: ./watcher/Dockerfile,    target: "",           cache_scope: watcher }
-          - { name: watcher,      platform: linux/arm64, context: ./watcher, dockerfile: ./watcher/Dockerfile,    target: "",           cache_scope: watcher }
+          - { name: authserver,   platform: linux/amd64, runner: ubuntu-24.04,     context: .,        dockerfile: ./apps/docker/Dockerfile, target: authserver,  cache_scope: azerothcore }
+          - { name: authserver,   platform: linux/arm64, runner: ubuntu-24.04-arm, context: .,        dockerfile: ./apps/docker/Dockerfile, target: authserver,  cache_scope: azerothcore }
+          - { name: worldserver,  platform: linux/amd64, runner: ubuntu-24.04,     context: .,        dockerfile: ./apps/docker/Dockerfile, target: worldserver, cache_scope: azerothcore }
+          - { name: worldserver,  platform: linux/arm64, runner: ubuntu-24.04-arm, context: .,        dockerfile: ./apps/docker/Dockerfile, target: worldserver, cache_scope: azerothcore }
+          - { name: db-import,    platform: linux/amd64, runner: ubuntu-24.04,     context: .,        dockerfile: ./apps/docker/Dockerfile, target: db-import,   cache_scope: azerothcore }
+          - { name: db-import,    platform: linux/arm64, runner: ubuntu-24.04-arm, context: .,        dockerfile: ./apps/docker/Dockerfile, target: db-import,   cache_scope: azerothcore }
+          - { name: watcher,      platform: linux/amd64, runner: ubuntu-24.04,     context: ./watcher, dockerfile: ./watcher/Dockerfile,    target: "",           cache_scope: watcher }
+          - { name: watcher,      platform: linux/arm64, runner: ubuntu-24.04-arm, context: ./watcher, dockerfile: ./watcher/Dockerfile,    target: "",           cache_scope: watcher }
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          submodules: recursive
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -78,11 +80,11 @@ jobs:
 
   merge:
     name: Merge manifest for ${{ matrix.name }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: build
     strategy:
       matrix:
-        name: [authserver, worldserver, db-import, tools, watcher]
+        name: [authserver, worldserver, db-import, watcher]
     steps:
       - name: Download digests
         uses: actions/download-artifact@v4
