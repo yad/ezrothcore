@@ -30,6 +30,7 @@
 !/modules/mod-flightmaster-whistle
 !/modules/mod-spell-autotarget
 !/modules/mod-junk-to-gold
+!/modules/mod-parangon
 
 /*.override.yml
 /*.override.yaml

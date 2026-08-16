@@ -1,0 +1,66 @@
+[worldserver]
+
+########################################
+# mod-parangon configuration
+########################################
+
+# Active ou desactive entierement le module.
+Parangon.Enable = 1
+
+# Niveau de personnage a partir duquel le mode parangon s'active.
+# Doit correspondre au niveau "end-game" du serveur (60 par defaut).
+# Le blocage de mod-individual-progression sous ce niveau est contourne
+# pour les kills via Parangon.BypassProgressionXPBlock (voir plus bas).
+Parangon.Threshold = 60
+
+# Niveau maximum atteignable en mode parangon.
+# ATTENTION : doit etre <= MAX_LEVEL compile dans le core (voir README).
+Parangon.MaxLevel = 250
+
+# Pourcentage de bonus de stats accorde par palier parangon (1 niveau = 1 palier).
+Parangon.StatsPerLevelPct = 1.0
+
+# Facteur d'ajustement fin applique a la reduction de degats contre le
+# contenu sous le seuil. 1.0 = neutralise exactement le bonus de stats
+# parangon dans les echanges de degats.
+Parangon.DamageEquityFactor = 1.0
+
+# XP requise pour atteindre le 1er palier parangon (calcul 100% C++, pas de
+# table SQL).
+Parangon.XPBaseRequirement = 50000
+
+# Croissance en % de l'XP requise a chaque palier supplementaire
+# (progression geometrique).
+Parangon.XPGrowthPct = 5.0
+
+# Plafond de l'XP gagnee via les recompenses de quete, exprime en % de l'XP
+# requise pour le palier parangon courant. Empeche qu'une seule quete ne
+# fasse gagner un palier entier d'un coup.
+Parangon.QuestXPCapPct = 5.0
+
+# Force l'engagement des monstres hostiles sous le seuil parangon situes a
+# proximite du joueur, independamment de la portee d'aggro native (qui
+# depend du vrai niveau du joueur). Ne rend pas hostile un monstre passif.
+Parangon.ForceAggroEnabled = 1
+
+# Portee fixe (en yards) utilisee pour le scan de proximite ci-dessus.
+Parangon.ForceAggroRangeYards = 20.0
+
+# Frequence du scan de proximite par joueur, en millisecondes.
+Parangon.ForceAggroCheckIntervalMs = 1000
+
+# Degats infliges par un monstre sous le seuil au joueur : % de bonus
+# compose par niveau d'ecart avec le seuil (sans jamais modifier les stats
+# du monstre - uniquement le nombre de degats final).
+Parangon.MobDamageBoostPctPerLevel = 3.0
+
+# Plafond du multiplicateur de degats monstre ci-dessus, pour eviter un
+# one-shot sur un tres gros ecart de niveau.
+Parangon.MobDamageBoostMaxFactor = 5.0
+
+# Contourne un blocage externe de l'XP en dessous du seuil parangon (ex:
+# mod-individual-progression qui bloque l'XP a 60/70 tant que le raid
+# correspondant n'est pas termine). Quand active, mod-parangon gere lui-
+# meme le gain d'XP de kill sous le seuil (progression WotLK normale, cout
+# XP natif), independamment de ce qu'un autre module fait a "amount".
+Parangon.BypassProgressionXPBlock = 1
