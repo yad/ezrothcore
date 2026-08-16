@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+  workflow_run:
+    workflows: ["Sync Upstream"]
+    types: ["completed"]
   workflow_dispatch:
 
 concurrency:
@@ -19,6 +22,7 @@ env:
 jobs:
   build:
     name: Build ${{ matrix.name }} (${{ matrix.platform }})
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ${{ matrix.runner }}
     permissions:
       contents: read

@@ -1,0 +1,53 @@
+name: Sync Upstream
+
+on:
+  schedule:
+    - cron: '0 0 * * 4'  # Every Thursday at midnight UTC
+  workflow_dispatch:
+
+jobs:
+  sync:
+    name: Merge upstream/Playerbot & update submodules
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+          fetch-depth: 0
+          # GH_PAT (repo-scoped PAT) is required when branch protection is enabled on main;
+          # falls back to GITHUB_TOKEN otherwise.
+          token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add upstream remote
+        run: git remote add upstream https://github.com/mod-playerbots/azerothcore-wotlk.git
+
+      - name: Fetch upstream
+        run: git fetch upstream
+
+      - name: Merge upstream/Playerbot
+        # Fails here on conflict — the job output shows which files conflict.
+        run: git merge upstream/Playerbot --no-edit
+
+      - name: Update submodules to latest remote
+        run: |
+          git submodule sync --recursive
+          git submodule update --init --recursive --remote
+
+      - name: Commit and push
+        run: |
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Already up to date, nothing to commit."
+          else
+            git commit -m "chore: sync upstream/Playerbot and update submodules [$(date -u +%Y-%m-%d)]"
+            git push
+          fi
