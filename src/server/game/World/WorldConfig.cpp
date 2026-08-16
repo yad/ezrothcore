@@ -41,6 +41,7 @@ void WorldConfig::BuildConfigCache()
     SetConfigValue<float>(RATE_REGEN_POWER_RUNICPOWER_LOSS, "Rate.Regen.RunicPower.Loss", 1.0f, ConfigValueCache::Reloadable::Yes, [](float const& value) { return value > 0.0f; }, "> 0");
     SetConfigValue<float>(RATE_REGEN_POWER_ENERGY, "Rate.Regen.Energy", 1.0f, ConfigValueCache::Reloadable::Yes, [](float const& value) { return value > 0.0f; }, "> 0");
     SetConfigValue<float>(RATE_REGEN_POWER_FOCUS, "Rate.Regen.Focus", 1.0f, ConfigValueCache::Reloadable::Yes, [](float const& value) { return value > 0.0f; }, "> 0");
+    SetConfigValue<float>(RATE_REGEN_POWER_HAPPINESS, "Rate.Regen.Happiness", 1.0f, ConfigValueCache::Reloadable::Yes, [](float const& value) { return value > 0.0f; }, "> 0");
     SetConfigValue<float>(RATE_REGEN_POWER_RUNES, "Rate.Regen.Runes", 1.0f, ConfigValueCache::Reloadable::Yes, [](float const& value) { return value > 0.0f; }, "> 0");
     SetConfigValue<float>(RATE_POWER_FOCUS, "Rate.Focus", 1.0f);
     SetConfigValue<float>(RATE_POWER_ENERGY, "Rate.Energy", 1.0f);

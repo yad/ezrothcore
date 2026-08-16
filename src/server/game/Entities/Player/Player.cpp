@@ -188,6 +188,8 @@ Player::Player(WorldSession* session): Unit(), m_mover(this), _cinematicMgr(*thi
     m_regenHealthTimer = 0;
     m_regenRageTimer = 0;
     m_regenRunicTimer = 0;
+    m_regenManaTimer = 0;
+    m_regenEnergyTimer = 0;
     m_foodEmoteTimerCount = 0;
     m_weaponChangeTimer = 0;
 
@@ -1809,10 +1811,28 @@ void Player::RegenerateAll()
     m_regenHealthTimer += m_regenTimer;
     m_regenRageTimer += m_regenTimer;
     m_regenRunicTimer += m_regenTimer;
+    m_regenManaTimer += m_regenTimer;
+    m_regenEnergyTimer += m_regenTimer;
 
-    Regenerate(POWER_ENERGY);
+    // Smooth energy regeneration (amount every tick, SetPower at rate-based interval)
+    {
+        float energyRate = sWorld->getRate(RATE_REGEN_POWER_ENERGY);
+        uint32 energyInterval = std::max<uint32>(1u, uint32(2000.0f / energyRate));
+        bool energySend = m_regenEnergyTimer >= energyInterval;
+        if (energySend)
+            m_regenEnergyTimer -= energyInterval;
+        Regenerate(POWER_ENERGY, energySend ? energyInterval : 0);
+    }
 
-    Regenerate(POWER_MANA);
+    // Smooth mana regeneration (amount every tick, SetPower at rate-based interval)
+    {
+        float manaRate = sWorld->getRate(RATE_REGEN_POWER_MANA);
+        uint32 manaInterval = std::max<uint32>(1u, uint32(2000.0f / manaRate));
+        bool manaSend = m_regenManaTimer >= manaInterval;
+        if (manaSend)
+            m_regenManaTimer -= manaInterval;
+        Regenerate(POWER_MANA, manaSend ? manaInterval : 0);
+    }
 
     // Runes act as cooldowns, and they don't need to send any data
     if (IsClass(CLASS_DEATH_KNIGHT, CLASS_CONTEXT_ABILITY))
@@ -2053,7 +2073,12 @@ void Player::Regenerate(Powers power, uint32 regenIntervalHint)
             m_powerFraction[power] = addvalue - integerValue;
     }
 
-    if (m_regenTimerCount >= 2000 || regenIntervalHint > 0 || curValue == 0 || curValue == maxValue)
+    // Mana/energy send SetPower only via their per-type rate timer (regenIntervalHint > 0).
+    // Other powers use the 2s m_regenTimerCount boundary.
+    bool timeToSend = (power == POWER_MANA || power == POWER_ENERGY)
+        ? (regenIntervalHint > 0)
+        : (m_regenTimerCount >= 2000 || regenIntervalHint > 0);
+    if (timeToSend || curValue == 0 || curValue == maxValue)
         SetPower(power, curValue, true, true);
     else
         UpdateUInt32Value(UNIT_FIELD_POWER1 + AsUnderlyingType(power), curValue);

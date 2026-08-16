@@ -2251,6 +2251,7 @@ Rate.Loyalty           = 1
 #                     1 - (Rate.Regen.RunicPower.Loss)
 #                     1 - (Rate.Regen.Energy)
 #                     1 - (Rate.Regen.Focus)
+#                     1 - (Rate.Regen.Happiness)
 #                     1 - (Rate.Regen.Runes)
 
 Rate.Regen.Health         = 1
@@ -2261,6 +2262,7 @@ Rate.Regen.RunicPower.Income = 1
 Rate.Regen.RunicPower.Loss = 1
 Rate.Regen.Energy         = 1
 Rate.Regen.Focus          = 1
+Rate.Regen.Happiness      = 1
 Rate.Regen.Runes          = 1
 
 #

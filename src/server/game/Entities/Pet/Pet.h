@@ -80,7 +80,7 @@ public:
             return m_autospells[pos];
     }
 
-    void LoseHappiness();
+    void LoseHappiness(float scale = 1.0f);
     HappinessState GetHappinessState();
     void GivePetXP(uint32 xp);
     void GivePetLevel(uint8 level);

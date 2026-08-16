@@ -2729,6 +2729,8 @@ protected:
     uint32 m_regenHealthTimer;
     uint32 m_regenRageTimer;
     uint32 m_regenRunicTimer;
+    uint32 m_regenManaTimer;
+    uint32 m_regenEnergyTimer;
     uint32 m_foodEmoteTimerCount;
     float m_powerFraction[MAX_POWERS];
     uint32 m_contestedPvPTimer;
