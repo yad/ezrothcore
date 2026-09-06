@@ -28,13 +28,9 @@
 [submodule "modules/mod-dungeon-clear"]
 	path = modules/mod-dungeon-clear
 	url = https://github.com/jrad7/mod-dungeon-clear.git
-[submodule "modules/mod-open-world-party-scaling"]
-	path = modules/mod-open-world-party-scaling
-	url = https://github.com/Stefan2102/mod-open-world-party-scaling.git
 [submodule "modules/mod-profession-experience"]
 	path = modules/mod-profession-experience
 	url = https://github.com/Tereneckla/mod-profession-experience.git
-
 [submodule "modules/mod-auto-resurrect"]
 	path = modules/mod-auto-resurrect
 	url = https://github.com/Elmegaard/mod-auto-resurrect.git
