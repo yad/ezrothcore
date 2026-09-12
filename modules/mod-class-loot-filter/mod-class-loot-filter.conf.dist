@@ -1,0 +1,63 @@
+[worldserver]
+
+########################################
+# ClassLootFilter (mod-class-loot-filter)
+########################################
+#
+#    ClassLootFilter.Enable
+#        Description: Active ou désactive le module.
+#        Default:     1
+
+ClassLootFilter.Enable = 1
+
+#    ClassLootFilter.OnlyBindOnEquip
+#        Description: Ne filtrer que les objets "Lié quand équipé" (BoE).
+#                      Laisser à 1 pour ne pas toucher aux BoP (déjà gérés
+#                      par le système de loot standard / need-before-greed).
+#        Default:     1
+
+ClassLootFilter.OnlyBindOnEquip = 1
+
+#    ClassLootFilter.FilterArmor
+#        Description: Filtrer les armures (tissu/cuir/mailles/plaques,
+#                      boucliers, reliques) selon la classe du joueur.
+#        Default:     1
+
+ClassLootFilter.FilterArmor = 1
+
+#    ClassLootFilter.FilterWeapons
+#        Description: Filtrer les armes selon la proficience de classe.
+#                      Table approximative (règles classiques WotLK) :
+#                      à valider avant activation.
+#        Default:     0
+
+ClassLootFilter.FilterWeapons = 0
+
+#    ClassLootFilter.MinItemLevel
+#        Description: Niveau d'objet minimum à partir duquel le filtre
+#                      s'applique (évite de toucher au loot trivial/gris).
+#        Default:     1
+
+ClassLootFilter.MinItemLevel = 1
+
+#    ClassLootFilter.TryAlternateItem
+#        Description: Si activé, avant de compenser en or, le module tente
+#                      de donner à la place un autre objet du MÊME butin qui
+#                      est utilisable par la classe du joueur.
+#        Default:     1
+
+ClassLootFilter.TryAlternateItem = 1
+
+#    ClassLootFilter.GoldCompensationPct
+#        Description: Pourcentage du prix de vente vendeur donné en or quand
+#                      aucune pièce utile n'a été trouvée (fallback final).
+#        Default:     100
+
+ClassLootFilter.GoldCompensationPct = 100
+
+#    ClassLootFilter.Announce
+#        Description: Annoncer en chat au joueur qu'un objet a été
+#                      remplacé/compensé.
+#        Default:     1
+
+ClassLootFilter.Announce = 1

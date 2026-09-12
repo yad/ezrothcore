@@ -26,11 +26,13 @@
 /src/server/scripts/Custom/*
 !/src/server/scripts/Custom/README.md
 
+!/modules/mod-class-loot-filter
+!/modules/mod-flightmaster-whistle
+!/modules/mod-junk-to-gold
 !/modules/mod-level-bag-reward
 !/modules/mod-player-boost
-!/modules/mod-flightmaster-whistle
 !/modules/mod-spell-autotarget
-!/modules/mod-junk-to-gold
+
 
 /*.override.yml
 /*.override.yaml
