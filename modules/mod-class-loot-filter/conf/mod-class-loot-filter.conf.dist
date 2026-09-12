@@ -31,7 +31,7 @@ ClassLootFilter.FilterArmor = 1
 #                      à valider avant activation.
 #        Default:     0
 
-ClassLootFilter.FilterWeapons = 0
+ClassLootFilter.FilterWeapons = 1
 
 #    ClassLootFilter.MinItemLevel
 #        Description: Niveau d'objet minimum à partir duquel le filtre

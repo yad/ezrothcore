@@ -16,6 +16,9 @@
  *   - Existence de Player::StoreNewItemInBestSlots(uint32 itemId, uint32 count)
  *   - Membres de LootItem (itemid, is_looted, AllowedForPlayer)
  *   - ObjectGuid::IsCreatureOrVehicle() / IsGameObject()
+ *   - Player::HasSkill(uint32 skill) et les constantes SKILL_MAIL /
+ *     SKILL_PLATE_MAIL (SharedDefines.h), utilisées pour la préférence
+ *     stricte d'armure (repli mailles si pas encore skill plaques, etc.)
  * Grep ces symboles dans votre core local si une erreur de build apparaît,
  * comme d'habitude, et on corrige au besoin.
  */
@@ -38,15 +41,15 @@
 namespace
 {
     // ---------------------------------------------------------------------
-    // Table de proficience d'armure par classe (règles classiques WotLK).
+    // Ancienne table "permissive" (tout ce que la classe PEUT porter).
+    // Conservée pour ClassLootFilter.StrictArmorPreference = 0.
     // ---------------------------------------------------------------------
     bool CanWearArmorSubclass(uint8 playerClass, uint32 subclass)
     {
         switch (subclass)
         {
-            case ITEM_SUBCLASS_ARMOR_MISC:  // capes, etc. -> jamais restreint
-            case ITEM_SUBCLASS_ARMOR_CLOTH: // tissu -> toutes les classes
-                return true;
+            case ITEM_SUBCLASS_ARMOR_CLOTH:
+                return true; // tissu -> toutes les classes
 
             case ITEM_SUBCLASS_ARMOR_LEATHER:
                 switch (playerClass)
@@ -60,7 +63,7 @@ namespace
                     case CLASS_DEATH_KNIGHT:
                         return true;
                     default:
-                        return false; // mage / prêtre / démoniste : cuir non porté
+                        return false;
                 }
 
             case ITEM_SUBCLASS_ARMOR_MAIL:
@@ -84,8 +87,58 @@ namespace
                     case CLASS_DEATH_KNIGHT:
                         return true;
                     default:
-                        return false; // ex: mage -> jamais de plaques
+                        return false;
                 }
+
+            default:
+                return true;
+        }
+    }
+
+    // ---------------------------------------------------------------------
+    // Mode strict : une seule sous-classe "préférée" par classe, avec repli
+    // automatique si le skill correspondant n'est pas encore acquis (ex :
+    // guerrier/paladin < niveau plaques -> mailles).
+    // ---------------------------------------------------------------------
+    uint32 GetPreferredArmorSubclass(Player* player)
+    {
+        switch (player->getClass())
+        {
+            case CLASS_MAGE:
+            case CLASS_PRIEST:
+            case CLASS_WARLOCK:
+                return ITEM_SUBCLASS_ARMOR_CLOTH;
+
+            case CLASS_ROGUE:
+            case CLASS_DRUID:
+                return ITEM_SUBCLASS_ARMOR_LEATHER;
+
+            case CLASS_HUNTER:
+            case CLASS_SHAMAN:
+                if (player->HasSkill(SKILL_MAIL))
+                    return ITEM_SUBCLASS_ARMOR_MAIL;
+                return ITEM_SUBCLASS_ARMOR_LEATHER;
+
+            case CLASS_WARRIOR:
+            case CLASS_PALADIN:
+            case CLASS_DEATH_KNIGHT:
+                if (player->HasSkill(SKILL_PLATE_MAIL))
+                    return ITEM_SUBCLASS_ARMOR_PLATE;
+                return ITEM_SUBCLASS_ARMOR_MAIL;
+
+            default:
+                return ITEM_SUBCLASS_ARMOR_CLOTH;
+        }
+    }
+
+    bool IsArmorSubclassAccepted(Player* player, uint32 subclass)
+    {
+        uint8 playerClass = player->getClass();
+
+        switch (subclass)
+        {
+            case ITEM_SUBCLASS_ARMOR_MISC: // capes, etc. -> jamais restreint
+                return true;
 
             case ITEM_SUBCLASS_ARMOR_SHIELD:
                 return playerClass == CLASS_WARRIOR || playerClass == CLASS_PALADIN || playerClass == CLASS_SHAMAN;
@@ -101,6 +154,14 @@ namespace
 
             case ITEM_SUBCLASS_ARMOR_SIGIL:
                 return playerClass == CLASS_DEATH_KNIGHT;
+
+            case ITEM_SUBCLASS_ARMOR_CLOTH:
+            case ITEM_SUBCLASS_ARMOR_LEATHER:
+            case ITEM_SUBCLASS_ARMOR_MAIL:
+            case ITEM_SUBCLASS_ARMOR_PLATE:
+                if (!sConfigMgr->GetOption<bool>("ClassLootFilter.StrictArmorPreference", true))
+                    return CanWearArmorSubclass(playerClass, subclass);
+                return subclass == GetPreferredArmorSubclass(player);
 
             default:
                 return true; // sous-classe inconnue -> ne pas bloquer par prudence
@@ -175,8 +236,10 @@ namespace
         }
     }
 
-    bool IsUsableByClass(ItemTemplate const* proto, uint8 playerClass)
+    bool IsUsableByClass(ItemTemplate const* proto, Player* player)
     {
+        uint8 playerClass = player->getClass();
+
         // 1) Restriction explicite en base (reliques, objets réservés à une classe...)
         if (proto->AllowableClass != -1)
         {
@@ -189,7 +252,7 @@ namespace
         {
             if (!sConfigMgr->GetOption<bool>("ClassLootFilter.FilterArmor", true))
                 return true;
-            return CanWearArmorSubclass(playerClass, proto->SubClass);
+            return IsArmorSubclassAccepted(player, proto->SubClass);
         }
 
         if (proto->Class == ITEM_CLASS_WEAPON)
@@ -242,7 +305,7 @@ namespace
             if (!li.AllowedForPlayer(player, lootguid))
                 continue;
 
-            if (!IsUsableByClass(altProto, player->getClass()))
+            if (!IsUsableByClass(altProto, player))
                 continue;
 
             if (player->StoreNewItemInBestSlots(li.itemid, 1))
@@ -310,7 +373,7 @@ public:
         if (proto->ItemLevel < minIlvl)
             return;
 
-        if (IsUsableByClass(proto, player->getClass()))
+        if (IsUsableByClass(proto, player))
             return; // rien a faire, la piece convient a la classe
 
         // La piece ne convient pas : on la retire de l'inventaire du joueur
