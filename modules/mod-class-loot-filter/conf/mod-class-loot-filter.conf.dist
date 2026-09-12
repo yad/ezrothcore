@@ -10,6 +10,16 @@
 
 ClassLootFilter.Enable = 1
 
+#    ClassLootFilter.ExcludeBots
+#        Description: Ignore les personnages contrôlés par mod-playerbots
+#                      (bots d'équipe ou bots aléatoires) : leur loot n'est
+#                      jamais retiré/remplacé/compensé, seuls les vrais
+#                      joueurs sont filtrés.
+#                      Nécessite mod-playerbots présent dans l'arbre.
+#        Default:     1
+
+ClassLootFilter.ExcludeBots = 1
+
 #    ClassLootFilter.OnlyBindOnEquip
 #        Description: Ne filtrer que les objets "Lié quand équipé" (BoE).
 #                      Laisser à 1 pour ne pas toucher aux BoP (déjà gérés
@@ -24,6 +34,22 @@ ClassLootFilter.OnlyBindOnEquip = 1
 #        Default:     1
 
 ClassLootFilter.FilterArmor = 1
+
+#    ClassLootFilter.StrictArmorPreference
+#        Description: Mode strict : chaque classe n'accepte qu'UN SEUL type
+#                      d'armure "préféré" (avec repli auto si le skill n'est
+#                      pas encore acquis) au lieu de tout ce qu'elle peut
+#                      légalement porter.
+#                      Ex: Mage -> tissu uniquement.
+#                          Guerrier/Paladin -> plaques si skill, sinon mailles.
+#                          Chasseur/Chaman -> mailles si skill, sinon cuir.
+#                          Voleur/Druide -> cuir uniquement.
+#                      Si désactivé (0), retombe sur l'ancien comportement
+#                      permissif (tout ce que la classe peut porter est
+#                      accepté, ex: un guerrier garde aussi le cuir/tissu).
+#        Default:     1
+
+ClassLootFilter.StrictArmorPreference = 1
 
 #    ClassLootFilter.FilterWeapons
 #        Description: Filtrer les armes selon la proficience de classe.

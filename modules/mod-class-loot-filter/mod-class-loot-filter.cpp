@@ -19,6 +19,13 @@
  *   - Player::HasSkill(uint32 skill) et les constantes SKILL_MAIL /
  *     SKILL_PLATE_MAIL (SharedDefines.h), utilisées pour la préférence
  *     stricte d'armure (repli mailles si pas encore skill plaques, etc.)
+ *   - sPlayerbotsMgr->GetPlayerbotAI(Player*) (mod-playerbots, header
+ *     "Playerbots.h") pour exclure les bots du filtre. DÉPENDANCE : ce
+ *     bloc suppose que mod-playerbots (liyunfan1223/ZhengPeiRu21) est
+ *     bien présent et compilé dans votre arbre. Si ce n'est pas le cas,
+ *     supprimer l'include "Playerbots.h" et la fonction IsPlayerBot()
+ *     (et faire retourner false partout où elle est appelée, ou juste
+ *     retirer les appels).
  * Grep ces symboles dans votre core local si une erreur de build apparaît,
  * comme d'habitude, et on corrige au besoin.
  */
@@ -35,6 +42,7 @@
 #include "Config.h"
 #include "Chat.h"
 #include "SharedDefines.h"
+#include "Playerbots.h" // mod-playerbots - retirer si le module n'est pas présent
 
 #include <initializer_list>
 
@@ -236,6 +244,13 @@ namespace
         }
     }
 
+    // Détecte un personnage contrôlé par mod-playerbots (bot d'équipe ou bot
+    // aléatoire). Voir la note de dépendance en haut du fichier.
+    bool IsPlayerBot(Player* player)
+    {
+        return sPlayerbotsMgr->GetPlayerbotAI(player) != nullptr;
+    }
+
     bool IsUsableByClass(ItemTemplate const* proto, Player* player)
     {
         uint8 playerClass = player->getClass();
@@ -356,6 +371,9 @@ public:
 
         if (!player || !item)
             return;
+
+        if (sConfigMgr->GetOption<bool>("ClassLootFilter.ExcludeBots", true) && IsPlayerBot(player))
+            return; // on ne touche pas au loot des playerbots
 
         ItemTemplate const* proto = item->GetTemplate();
         if (!proto)
