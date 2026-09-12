@@ -1,24 +1,37 @@
 /*
  * mod-class-loot-filter
  * ----------------------
- * Empêche de looter des équipements BoE (Bind on Equip) inutilisables par la
- * classe du joueur (ex: plaques pour un mage) sur les créatures et les coffres.
+ * Deux comportements DISTINCTS :
  *
- * Fallback si aucune pièce "utile" n'est disponible dans la même table de
- * butin :
- *   1) tente de remplacer l'objet par un autre objet du MÊME loot (encore
- *      disponible, non déjà loot) qui EST utilisable par la classe ;
- *   2) sinon, compense en or (basé sur le prix de vente vendeur de l'objet).
+ * 1) BoE (Bind on Equip) sur créatures/coffres, tous types de mobs :
+ *    au moment du loot (PlayerScript::OnLootItem), si l'objet n'est pas
+ *    utilisable/préféré pour la classe du joueur, il est retiré, puis :
+ *      a) tente de le remplacer par un autre objet du MÊME loot encore
+ *         disponible qui EST utilisable ;
+ *      b) sinon, compense en or (prix de vente vendeur).
+ *
+ * 2) "Smart loot" BoP (Bind on Pickup) sur les BOSS de donjon/raid
+ *    uniquement : au moment de la génération de la table de butin
+ *    (GlobalScript::OnItemRoll), la chance de drop de chaque pièce
+ *    d'armure/arme soulbound est augmentée si elle est utilisable par au
+ *    moins un joueur HUMAIN du groupe (bots exclus), et réduite sinon.
+ *    Cela influence uniquement si l'objet apparaît dans le butin, PAS qui
+ *    gagne le tirage besoin/cupidité ensuite (toujours géré par le core).
  *
  * ATTENTION - à vérifier avant compilation sur votre arbre exact :
  *   - Signature de PlayerScript::OnLootItem (Player*, Item*, uint32, ObjectGuid)
+ *   - Signature de GlobalScript::OnItemRoll (Player const*, LootStoreItem const*,
+ *     float& chance, Loot&, LootStore const&) -> bool
  *   - Membre "loot" sur Creature / GameObject (creature->loot / go->loot)
+ *   - Membre Loot::sourceWorldObjectGUID (LootMgr.h)
  *   - Existence de Player::StoreNewItemInBestSlots(uint32 itemId, uint32 count)
  *   - Membres de LootItem (itemid, is_looted, AllowedForPlayer)
  *   - ObjectGuid::IsCreatureOrVehicle() / IsGameObject()
  *   - Player::HasSkill(uint32 skill) et les constantes SKILL_MAIL /
  *     SKILL_PLATE_MAIL (SharedDefines.h), utilisées pour la préférence
  *     stricte d'armure (repli mailles si pas encore skill plaques, etc.)
+ *   - Group::GetFirstMember() / GroupReference::next() / GetSource()
+ *     (Group.h), pour lister les membres du groupe
  *   - sPlayerbotsMgr->GetPlayerbotAI(Player*) (mod-playerbots, header
  *     "Playerbots.h") pour exclure les bots du filtre. DÉPENDANCE : ce
  *     bloc suppose que mod-playerbots (liyunfan1223/ZhengPeiRu21) est
@@ -32,6 +45,7 @@
 
 #include "ScriptMgr.h"
 #include "Player.h"
+#include "Group.h"
 #include "Item.h"
 #include "ItemTemplate.h"
 #include "Creature.h"
@@ -45,6 +59,8 @@
 #include "Playerbots.h" // mod-playerbots - retirer si le module n'est pas présent
 
 #include <initializer_list>
+#include <vector>
+#include <algorithm>
 
 namespace
 {
@@ -296,6 +312,48 @@ namespace
         return nullptr;
     }
 
+    // Le butin provient-il d'un boss de donjon/raid ? (drapeau flags_extra
+    // "Dungeon Boss" côté template de créature — n'englobe pas les boss de
+    // monde ouvert, qui ne sont pas concernés par la demande).
+    bool IsDungeonOrRaidBossLoot(Player* player, ObjectGuid const& lootguid)
+    {
+        if (!lootguid.IsCreatureOrVehicle())
+            return false;
+
+        Creature* creature = ObjectAccessor::GetCreature(*player, lootguid);
+        if (!creature)
+            return false;
+
+        return creature->IsDungeonBoss();
+    }
+
+    // Liste les joueurs humains (hors playerbots) pertinents pour ce butin :
+    // les membres en ligne du groupe du joueur, ou lui seul s'il est solo.
+    std::vector<Player*> GetHumanGroupMembers(Player* player)
+    {
+        std::vector<Player*> humans;
+        bool excludeBots = sConfigMgr->GetOption<bool>("ClassLootFilter.ExcludeBots", true);
+
+        if (Group* group = player->GetGroup())
+        {
+            for (GroupReference* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
+            {
+                Player* member = itr->GetSource();
+                if (!member || !member->IsInWorld())
+                    continue;
+                if (excludeBots && IsPlayerBot(member))
+                    continue;
+                humans.push_back(member);
+            }
+        }
+        else if (!(excludeBots && IsPlayerBot(player)))
+        {
+            humans.push_back(player);
+        }
+
+        return humans;
+    }
+
     // Cherche, dans le même butin, un autre objet (armure/arme) encore
     // disponible et utilisable par la classe du joueur, pour remplacer
     // l'objet inutile qui vient d'être retiré.
@@ -338,9 +396,11 @@ namespace
         return false;
     }
 
-    void GrantGoldFallback(Player* player, ItemTemplate const* proto, uint32 count)
+    void GrantGoldFallback(Player* player, ItemTemplate const* proto, uint32 count, bool isBossLoot)
     {
-        uint32 pct = sConfigMgr->GetOption<uint32>("ClassLootFilter.GoldCompensationPct", 100);
+        uint32 pct = isBossLoot
+            ? sConfigMgr->GetOption<uint32>("ClassLootFilter.BossGoldCompensationPct", 150)
+            : sConfigMgr->GetOption<uint32>("ClassLootFilter.GoldCompensationPct", 100);
         uint64 gold = static_cast<uint64>(proto->SellPrice) * count * pct / 100;
 
         if (gold > 0)
@@ -359,6 +419,64 @@ namespace
     }
 }
 
+class ClassLootFilter_GlobalScript : public GlobalScript
+{
+public:
+    ClassLootFilter_GlobalScript() : GlobalScript("ClassLootFilter_GlobalScript") { }
+
+    // "Smart loot" : pondère la chance de drop des pièces SOULBOUND (BoP)
+    // sur les boss de donjon/raid selon les classes des joueurs humains du
+    // groupe. Ne touche jamais au BoE (géré par OnLootItem) ni aux boss de
+    // monde ouvert / trashs.
+    bool OnItemRoll(Player const* player, LootStoreItem const* lootStoreItem, float& chance, Loot& loot, LootStore const& /*store*/) override
+    {
+        if (!sConfigMgr->GetOption<bool>("ClassLootFilter.SmartLootEnable", true))
+            return true;
+
+        if (!player || !lootStoreItem)
+            return true;
+
+        Player* nonConstPlayer = const_cast<Player*>(player);
+
+        Creature* creature = ObjectAccessor::GetCreature(*nonConstPlayer, loot.sourceWorldObjectGUID);
+        if (!creature || !creature->IsDungeonBoss())
+            return true; // uniquement les boss de donjon/raid
+
+        ItemTemplate const* proto = sObjectMgr->GetItemTemplate(lootStoreItem->itemid);
+        if (!proto)
+            return true;
+
+        // Uniquement armures/armes soulbound (BoP) - le BoE reste géré par OnLootItem
+        if (proto->Class != ITEM_CLASS_ARMOR && proto->Class != ITEM_CLASS_WEAPON)
+            return true;
+
+        if (proto->Bonding != ITEM_BIND_WHEN_PICKED_UP)
+            return true;
+
+        std::vector<Player*> humans = GetHumanGroupMembers(nonConstPlayer);
+        if (humans.empty())
+            return true; // aucun humain identifiable -> ne pas biaiser
+
+        bool usefulForAtLeastOneHuman = false;
+        for (Player* human : humans)
+        {
+            if (IsUsableByClass(proto, human))
+            {
+                usefulForAtLeastOneHuman = true;
+                break;
+            }
+        }
+
+        float factor = usefulForAtLeastOneHuman
+            ? sConfigMgr->GetOption<float>("ClassLootFilter.SmartLootBoostFactor", 2.0f)
+            : sConfigMgr->GetOption<float>("ClassLootFilter.SmartLootPenaltyFactor", 0.3f);
+
+        chance = std::max(0.0f, std::min(chance * factor, 100.0f));
+
+        return true;
+    }
+};
+
 class ClassLootFilter_PlayerScript : public PlayerScript
 {
 public:
@@ -374,6 +492,11 @@ public:
 
         if (sConfigMgr->GetOption<bool>("ClassLootFilter.ExcludeBots", true) && IsPlayerBot(player))
             return; // on ne touche pas au loot des playerbots
+
+        bool isBossLoot = IsDungeonOrRaidBossLoot(player, lootguid);
+
+        if (sConfigMgr->GetOption<bool>("ClassLootFilter.OnlyBosses", false) && !isBossLoot)
+            return; // mode restreint aux boss de donjon/raid uniquement
 
         ItemTemplate const* proto = item->GetTemplate();
         if (!proto)
@@ -407,7 +530,7 @@ public:
             replaced = TryGrantAlternateItem(player, lootguid, itemId);
 
         if (!replaced)
-            GrantGoldFallback(player, proto, removedCount);
+            GrantGoldFallback(player, proto, removedCount, isBossLoot);
     }
 };
 
@@ -417,4 +540,5 @@ public:
 void Addmod_class_loot_filterScripts()
 {
     new ClassLootFilter_PlayerScript();
+    new ClassLootFilter_GlobalScript();
 }
