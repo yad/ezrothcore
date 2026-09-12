@@ -34,9 +34,6 @@
 [submodule "modules/mod-auto-resurrect"]
 	path = modules/mod-auto-resurrect
 	url = https://github.com/Elmegaard/mod-auto-resurrect.git
-[submodule "modules/mod-transmog"]
-	path = modules/mod-transmog
-	url = https://github.com/azerothcore/mod-transmog.git
 [submodule "modules/mod-transmog-plus"]
 	path = modules/mod-transmog-plus
 	url = https://github.com/Stefan2102/mod-transmog-plus.git
