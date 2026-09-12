@@ -40,9 +40,6 @@
 [submodule "modules/mod-transmog-plus"]
 	path = modules/mod-transmog-plus
 	url = https://github.com/Stefan2102/mod-transmog-plus.git
-[submodule "modules/mod-dungeon-quests"]
-	path = modules/mod-dungeon-quests
-	url = https://github.com/Hisha/mod-dungeon-quests.git
 [submodule "modules/mod-playerbots-city-life"]
 	path = modules/mod-playerbots-city-life
 	url = https://github.com/vrzgames/mod-playerbots-city-life.git
