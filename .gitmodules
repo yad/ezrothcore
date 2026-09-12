@@ -46,3 +46,6 @@
 [submodule "modules/mod-playerbots-city-life"]
 	path = modules/mod-playerbots-city-life
 	url = https://github.com/vrzgames/mod-playerbots-city-life.git
+[submodule "modules/mod-playerbots-pvp-life"]
+	path = modules/mod-playerbots-pvp-life
+	url = https://github.com/vrzgames/mod-playerbots-pvp-life.git
