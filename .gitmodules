@@ -43,3 +43,6 @@
 [submodule "modules/mod-playerbots-pvp-life"]
 	path = modules/mod-playerbots-pvp-life
 	url = https://github.com/vrzgames/mod-playerbots-pvp-life.git
+[submodule "modules/mod-dual-tracking"]
+	path = modules/mod-dual-tracking
+	url = https://github.com/b-wun/mod-dual-tracking.git
