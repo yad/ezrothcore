@@ -22,7 +22,10 @@
  *   - Signature de PlayerScript::OnLootItem (Player*, Item*, uint32, ObjectGuid)
  *   - Signature de GlobalScript::OnItemRoll (Player const*, LootStoreItem const*,
  *     float& chance, Loot&, LootStore const&) -> bool
- *   - Membre "loot" sur Creature / GameObject (creature->loot / go->loot)
+ *   - Enum ItemBondingType (ItemTemplate.h) : NO_BIND, BIND_WHEN_PICKED_UP,
+ *     BIND_WHEN_EQUIPPED, BIND_WHEN_USE, BIND_QUEST_ITEM. Attention, selon
+ *     la version du core, la valeur BoE peut s'appeler BIND_WHEN_EQUIPPED
+ *     (deux P) ou BIND_WHEN_EQUIPED (un seul P) — grep pour confirmer.
  *   - Membre Loot::sourceWorldObjectGUID (LootMgr.h)
  *   - Existence de Player::StoreNewItemInBestSlots(uint32 itemId, uint32 count)
  *   - Membres de LootItem (itemid, is_looted, AllowedForPlayer)
@@ -450,7 +453,7 @@ public:
         if (proto->Class != ITEM_CLASS_ARMOR && proto->Class != ITEM_CLASS_WEAPON)
             return true;
 
-        if (proto->Bonding != ITEM_BIND_WHEN_PICKED_UP)
+        if (proto->Bonding != BIND_WHEN_PICKED_UP)
             return true;
 
         std::vector<Player*> humans = GetHumanGroupMembers(nonConstPlayer);
@@ -482,7 +485,7 @@ class ClassLootFilter_PlayerScript : public PlayerScript
 public:
     ClassLootFilter_PlayerScript() : PlayerScript("ClassLootFilter_PlayerScript") { }
 
-    void OnLootItem(Player* player, Item* item, uint32 /*count*/, ObjectGuid lootguid) override
+    void OnPlayerLootItem(Player* player, Item* item, uint32 /*count*/, ObjectGuid lootguid) override
     {
         if (!sConfigMgr->GetOption<bool>("ClassLootFilter.Enable", true))
             return;
@@ -507,7 +510,7 @@ public:
             return;
 
         if (sConfigMgr->GetOption<bool>("ClassLootFilter.OnlyBindOnEquip", true)
-            && proto->Bonding != ITEM_BIND_ON_EQUIP)
+            && proto->Bonding != BIND_WHEN_EQUIPPED)
             return;
 
         uint32 minIlvl = sConfigMgr->GetOption<uint32>("ClassLootFilter.MinItemLevel", 1);
