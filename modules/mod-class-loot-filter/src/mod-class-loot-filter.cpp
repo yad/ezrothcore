@@ -8,7 +8,7 @@
  *    utilisable/préféré pour la classe du joueur, il est retiré, puis :
  *      a) tente de le remplacer par un autre objet du MÊME loot encore
  *         disponible qui EST utilisable ;
- *      b) sinon, compense en or (prix de vente vendeur).
+ *      b) sinon, rend l'objet d'origine.
  *
  * 2) "Smart loot" BoP (Bind on Pickup) sur les BOSS de donjon/raid
  *    uniquement : au moment de la génération de la table de butin
@@ -55,6 +55,7 @@
 #include "Config.h"
 #include "Chat.h"
 #include "SharedDefines.h"
+#include "Random.h"
 
 #include <initializer_list>
 #include <vector>
@@ -366,6 +367,7 @@ namespace
         if (!loot)
             return false;
 
+        std::vector<LootItem*> candidates;
         for (LootItem& li : loot->items)
         {
             if (li.is_looted || li.itemid == excludeItemId)
@@ -387,42 +389,27 @@ namespace
             if (!IsUsableByClass(altProto, player))
                 continue;
 
-            if (player->StoreNewItemInBestSlots(li.itemid, 1))
-            {
-                li.is_looted = true;
+            candidates.push_back(&li);
+        }
 
-                if (sConfigMgr->GetOption<bool>("ClassLootFilter.Announce", true))
-                    ChatHandler(player->GetSession()).PSendSysMessage(
-                        "|cffff8000[ClassLootFilter]|r Objet remplacé par une pièce adaptée à votre classe.");
+        if (candidates.empty())
+            return false;
 
-                return true;
-            }
+        LootItem* selected = candidates[urand(0, static_cast<uint32>(candidates.size() - 1))];
+        if (player->StoreNewItemInBestSlots(selected->itemid, 1))
+        {
+            selected->is_looted = true;
+
+            if (sConfigMgr->GetOption<bool>("ClassLootFilter.Announce", true))
+                ChatHandler(player->GetSession()).PSendSysMessage(
+                    "|cffff8000[ClassLootFilter]|r Objet remplacé par une pièce adaptée à votre classe.");
+
+            return true;
         }
 
         return false;
     }
 
-    void GrantGoldFallback(Player* player, ItemTemplate const* proto, uint32 count, bool isBossLoot)
-    {
-        uint32 pct = isBossLoot
-            ? sConfigMgr->GetOption<uint32>("ClassLootFilter.BossGoldCompensationPct", 150)
-            : sConfigMgr->GetOption<uint32>("ClassLootFilter.GoldCompensationPct", 100);
-        uint64 gold = static_cast<uint64>(proto->SellPrice) * count * pct / 100;
-
-        if (gold > 0)
-            player->ModifyMoney(static_cast<int64>(gold));
-
-        if (sConfigMgr->GetOption<bool>("ClassLootFilter.Announce", true))
-        {
-            if (gold > 0)
-                ChatHandler(player->GetSession()).PSendSysMessage(
-                    "|cffff8000[ClassLootFilter]|r Objet inutilisable par votre classe retiré, {} po de compensation.",
-                    gold / 10000);
-            else
-                ChatHandler(player->GetSession()).PSendSysMessage(
-                    "|cffff8000[ClassLootFilter]|r Objet inutilisable par votre classe retiré.");
-        }
-    }
 }
 
 class ClassLootFilter_GlobalScript : public GlobalScript
@@ -536,7 +523,13 @@ public:
             replaced = TryGrantAlternateItem(player, lootguid, itemId, proto->Quality);
 
         if (!replaced)
-            GrantGoldFallback(player, proto, removedCount, isBossLoot);
+        {
+            player->StoreNewItemInBestSlots(itemId, removedCount);
+
+            if (sConfigMgr->GetOption<bool>("ClassLootFilter.Announce", true))
+                ChatHandler(player->GetSession()).PSendSysMessage(
+                    "|cffff8000[ClassLootFilter]|r Aucun remplacement adapté trouvé, l'objet d'origine vous est rendu.");
+        }
     }
 };
 

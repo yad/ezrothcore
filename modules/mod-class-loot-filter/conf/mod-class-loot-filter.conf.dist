@@ -13,7 +13,7 @@ ClassLootFilter.Enable = 1
 #    ClassLootFilter.ExcludeBots
 #        Description: Ignore les personnages contrôlés par mod-playerbots
 #                      (bots d'équipe ou bots aléatoires) : leur loot n'est
-#                      jamais retiré/remplacé/compensé, seuls les vrais
+#                      jamais retiré/remplacé/rendu, seuls les vrais
 #                      joueurs sont filtrés.
 #                      Nécessite mod-playerbots présent dans l'arbre.
 #        Default:     1
@@ -27,14 +27,6 @@ ClassLootFilter.ExcludeBots = 1
 #        Default:     0
 
 ClassLootFilter.OnlyBosses = 0
-
-#    ClassLootFilter.BossGoldCompensationPct
-#        Description: Comme ClassLootFilter.GoldCompensationPct, mais
-#                      spécifique au loot de boss de donjon/raid (les BoE
-#                      de boss valent généralement plus cher).
-#        Default:     150
-
-ClassLootFilter.BossGoldCompensationPct = 150
 
 ########################################
 # Smart loot BoP sur boss (donjon/raid)
@@ -119,23 +111,16 @@ ClassLootFilter.FilterWeapons = 1
 ClassLootFilter.MinItemLevel = 1
 
 #    ClassLootFilter.TryAlternateItem
-#        Description: Si activé, avant de compenser en or, le module tente
-#                      de donner à la place un autre objet du MÊME butin qui
-#                      est utilisable par la classe du joueur.
+#        Description: Si activé, avant de rendre l'objet d'origine, le module
+#                      tente de donner à la place un autre objet de même
+#                      qualité du MÊME butin, utilisable par la classe.
 #        Default:     1
 
 ClassLootFilter.TryAlternateItem = 1
 
-#    ClassLootFilter.GoldCompensationPct
-#        Description: Pourcentage du prix de vente vendeur donné en or quand
-#                      aucune pièce utile n'a été trouvée (fallback final).
-#        Default:     100
-
-ClassLootFilter.GoldCompensationPct = 100
-
 #    ClassLootFilter.Announce
 #        Description: Annoncer en chat au joueur qu'un objet a été
-#                      remplacé/compensé.
+#                      remplacé ou rendu.
 #        Default:     1
 
 ClassLootFilter.Announce = 1

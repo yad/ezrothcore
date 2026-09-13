@@ -38,20 +38,14 @@ Au moment du loot (`PlayerScript::OnLootItem`) :
    - **fallback 1** : le module cherche dans le même butin (même créature/
      coffre) un autre objet encore disponible et utilisable par la classe, et
      le donne à la place ;
-   - **fallback 2** (si rien d'utile dans ce butin) : compensation en or,
-     basée sur le prix de vente vendeur de l'objet retiré
-     (`ClassLootFilter.GoldCompensationPct`, ou
-     `ClassLootFilter.BossGoldCompensationPct` si la source est un boss de
-     donjon/raid).
+   - **fallback 2** (si rien d'utile de même qualité n'est disponible dans ce
+     butin) : l'objet d'origine est rendu au joueur.
 
 Deux options dédiées au contexte boss pour ce mécanisme BoE :
 
 - `ClassLootFilter.OnlyBosses` : si activé, le mécanisme BoE ne s'applique
   plus qu'aux créatures marquées "Dungeon Boss" ; trashs et coffres ne sont
   plus touchés. Désactivé par défaut.
-- `ClassLootFilter.BossGoldCompensationPct` (150% par défaut) : taux de
-  compensation spécifique quand la source est un boss.
-
 ## 2) Smart loot BoP — boss de donjon/raid uniquement
 
 Mécanisme totalement différent, indépendant du BoE, qui agit **avant** le
