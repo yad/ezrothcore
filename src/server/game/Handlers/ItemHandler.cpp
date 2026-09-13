@@ -786,6 +786,7 @@ void WorldSession::HandleBuybackItem(WorldPackets::Item::BuybackItem& packet)
             _player->RemoveItemFromBuyBackSlot(packet.Slot, false);
             _player->ItemAddedQuestCheck(pItem->GetEntry(), pItem->GetCount());
             _player->StoreItem(dest, pItem, true);
+            sScriptMgr->OnPlayerAfterBuybackItem(_player, pItem);
         }
         else
             _player->SendEquipError(msg, pItem, nullptr);

@@ -413,6 +413,7 @@ public: /* PlayerScript */
     bool OnPlayerCanGroupInvite(Player* player, std::string& membername);
     bool OnPlayerCanGroupAccept(Player* player, Group* group);
     bool OnPlayerCanSellItem(Player* player, Item* item, Creature* creature);
+    void OnPlayerAfterBuybackItem(Player* player, Item* item);
     bool OnPlayerCanSendMail(Player* player, ObjectGuid receiverGuid, ObjectGuid mailbox, std::string& subject, std::string& body, uint32 money, uint32 COD, Item* item);
     void OnPlayerPetitionBuy(Player* player, Creature* creature, uint32& charterid, uint32& cost, uint32& type);
     void OnPlayerPetitionShowList(Player* player, Creature* creature, uint32& CharterEntry, uint32& CharterDispayID, uint32& CharterCost);
@@ -751,7 +752,7 @@ public: /* LootScript */
     void OnLootMoney(Player* player, uint32 gold);
 
 public: /* PlayerbotScript */
-    
+
     bool OnPlayerbotCheckLFGQueue(lfg::Lfg5Guids const& guidsList);
     void OnPlayerbotCheckKillTask(Player* player, Unit* victim);
     void OnPlayerbotCheckPetitionAccount(Player* player, bool& found);
