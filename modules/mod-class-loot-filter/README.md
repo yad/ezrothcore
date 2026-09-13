@@ -145,9 +145,9 @@ arbre local avant de lancer le build complet :
 - Nom de la fonction de chargement `Addmod_class_loot_filterScripts()` :
   à adapter selon la convention de votre chargeur de modules (comme cela
   avait été fait pour mod-parangon → `Addmod_parangonScripts`).
-- `sPlayerbotsMgr->GetPlayerbotAI(Player*)` (header `Playerbots.h`,
-  mod-playerbots) pour l'exclusion des bots — dépendance à retirer si
-  mod-playerbots n'est pas installé.
+- `WorldSession::IsBot()`, utilisé sous `#ifdef MOD_PLAYERBOTS` — compile
+  à `false` si mod-playerbots n'est pas présent, sans dépendance dure sur
+  un header externe.
 
 ## Limites connues
 

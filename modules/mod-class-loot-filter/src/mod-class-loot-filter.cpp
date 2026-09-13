@@ -32,13 +32,9 @@
  *     stricte d'armure (repli mailles si pas encore skill plaques, etc.)
  *   - Group::GetFirstMember() / GroupReference::next() / GetSource()
  *     (Group.h), pour lister les membres du groupe
- *   - sPlayerbotsMgr->GetPlayerbotAI(Player*) (mod-playerbots, header
- *     "Playerbots.h") pour exclure les bots du filtre. DÉPENDANCE : ce
- *     bloc suppose que mod-playerbots (liyunfan1223/ZhengPeiRu21) est
- *     bien présent et compilé dans votre arbre. Si ce n'est pas le cas,
- *     supprimer l'include "Playerbots.h" et la fonction IsPlayerBot()
- *     (et faire retourner false partout où elle est appelée, ou juste
- *     retirer les appels).
+ *   - WorldSession::IsBot(), sous #ifdef MOD_PLAYERBOTS (mod-playerbots) -
+ *     compile à false si le module playerbots n'est pas présent, aucune
+ *     dépendance dure sur un header playerbots externe.
  * Grep ces symboles dans votre core local si une erreur de build apparaît,
  * comme d'habitude, et on corrige au besoin.
  */
@@ -56,7 +52,6 @@
 #include "Config.h"
 #include "Chat.h"
 #include "SharedDefines.h"
-#include "Playerbots.h" // mod-playerbots - retirer si le module n'est pas présent
 
 #include <initializer_list>
 #include <vector>
@@ -261,10 +256,15 @@ namespace
     }
 
     // Détecte un personnage contrôlé par mod-playerbots (bot d'équipe ou bot
-    // aléatoire). Voir la note de dépendance en haut du fichier.
+    // aléatoire). Le bloc #ifdef rend le module portable même sans
+    // mod-playerbots dans l'arbre (retourne alors toujours false).
     bool IsPlayerBot(Player* player)
     {
-        return sPlayerbotsMgr->GetPlayerbotAI(player) != nullptr;
+#ifdef MOD_PLAYERBOTS
+        if (player && player->GetSession())
+            return player->GetSession()->IsBot();
+#endif
+        return false;
     }
 
     bool IsUsableByClass(ItemTemplate const* proto, Player* player)
