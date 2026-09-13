@@ -357,10 +357,10 @@ namespace
         return humans;
     }
 
-    // Cherche, dans le même butin, un autre objet (armure/arme) encore
-    // disponible et utilisable par la classe du joueur, pour remplacer
-    // l'objet inutile qui vient d'être retiré.
-    bool TryGrantAlternateItem(Player* player, ObjectGuid const& lootguid, uint32 excludeItemId)
+    // Cherche, dans le même butin, un autre objet (armure/arme) de même
+    // qualité, encore disponible et utilisable par la classe du joueur.
+    bool TryGrantAlternateItem(Player* player, ObjectGuid const& lootguid, uint32 excludeItemId,
+        uint32 requiredQuality)
     {
         Loot* loot = GetLootFromGuid(player, lootguid);
         if (!loot)
@@ -378,6 +378,9 @@ namespace
             if (altProto->Class != ITEM_CLASS_ARMOR && altProto->Class != ITEM_CLASS_WEAPON)
                 continue;
 
+            if (altProto->Quality != requiredQuality)
+                continue;
+
             if (!li.AllowedForPlayer(player, lootguid))
                 continue;
 
@@ -390,7 +393,7 @@ namespace
 
                 if (sConfigMgr->GetOption<bool>("ClassLootFilter.Announce", true))
                     ChatHandler(player->GetSession()).PSendSysMessage(
-                        "|cffff8000[ClassLootFilter]|r Objet remplace par une piece adaptee a votre classe.");
+                        "|cffff8000[ClassLootFilter]|r Objet remplacé par une pièce adaptée à votre classe.");
 
                 return true;
             }
@@ -413,11 +416,11 @@ namespace
         {
             if (gold > 0)
                 ChatHandler(player->GetSession()).PSendSysMessage(
-                    "|cffff8000[ClassLootFilter]|r Objet inutilisable par votre classe retire, {} po de compensation.",
+                    "|cffff8000[ClassLootFilter]|r Objet inutilisable par votre classe retiré, {} po de compensation.",
                     gold / 10000);
             else
                 ChatHandler(player->GetSession()).PSendSysMessage(
-                    "|cffff8000[ClassLootFilter]|r Objet inutilisable par votre classe retire.");
+                    "|cffff8000[ClassLootFilter]|r Objet inutilisable par votre classe retiré.");
         }
     }
 }
@@ -530,7 +533,7 @@ public:
 
         bool replaced = false;
         if (sConfigMgr->GetOption<bool>("ClassLootFilter.TryAlternateItem", true))
-            replaced = TryGrantAlternateItem(player, lootguid, itemId);
+            replaced = TryGrantAlternateItem(player, lootguid, itemId, proto->Quality);
 
         if (!replaced)
             GrantGoldFallback(player, proto, removedCount, isBossLoot);
