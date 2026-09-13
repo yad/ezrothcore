@@ -46,3 +46,6 @@
 [submodule "modules/mod-dual-tracking"]
 	path = modules/mod-dual-tracking
 	url = https://github.com/b-wun/mod-dual-tracking.git
+[submodule "modules/mod-instant-swing"]
+	path = modules/mod-instant-swing
+	url = https://github.com/Stefan2102/mod-instant-swing.git
