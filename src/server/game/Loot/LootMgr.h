@@ -224,6 +224,7 @@ public:
     [[nodiscard]] bool HaveLootFor(uint32 loot_id) const { return m_LootTemplates.find(loot_id) != m_LootTemplates.end(); }
     [[nodiscard]] bool HaveQuestLootFor(uint32 loot_id) const;
     bool HaveQuestLootForPlayer(uint32 loot_id, Player const* player) const;
+    void CollectPossibleItems(uint32 loot_id, std::vector<LootStoreItem const*>& items) const;
 
     [[nodiscard]] LootTemplate const* GetLootFor(uint32 loot_id) const;
     [[nodiscard]] LootTemplate* GetLootForConditionFill(uint32 loot_id) const;
@@ -254,6 +255,7 @@ public:
     void AddEntry(LootStoreItem* item);
     // Rolls for every item in the template and adds the rolled items the the loot
     void Process(Loot& loot, LootStore const& store, uint16 lootMode, Player const* player, uint8 groupId = 0, bool isTopLevel = true) const;
+    void CollectPossibleItems(std::vector<LootStoreItem const*>& items, std::set<uint32>& visitedReferences) const;
     void CopyConditions(ConditionList conditions);
     bool CopyConditions(LootItem* li, uint32 conditionLootId = 0) const;
 

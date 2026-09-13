@@ -367,38 +367,122 @@ namespace
         if (!loot)
             return false;
 
-        std::vector<LootItem*> candidates;
-        for (LootItem& li : loot->items)
+        struct LootCandidate
         {
-            if (li.is_looted || li.itemid == excludeItemId)
-                continue;
+            LootItem* item;
+            bool questItem;
+            uint8 lootIndex;
+            bool fromTemplate;
+        };
 
-            ItemTemplate const* altProto = sObjectMgr->GetItemTemplate(li.itemid);
-            if (!altProto)
-                continue;
+        std::vector<LootCandidate> candidates;
+        std::vector<LootItem> templateItems;
+        ObjectGuid sourceGuid = loot->sourceWorldObjectGUID ? loot->sourceWorldObjectGUID : lootguid;
 
-            if (altProto->Class != ITEM_CLASS_ARMOR && altProto->Class != ITEM_CLASS_WEAPON)
-                continue;
+        auto collectCandidates = [&](std::vector<LootItem>& items, bool questItem)
+        {
+            for (uint8 index = 0; index < items.size(); ++index)
+            {
+                LootItem& li = items[index];
+                if (li.is_looted || li.is_blocked || li.itemid == excludeItemId)
+                    continue;
 
-            if (altProto->Quality != requiredQuality)
-                continue;
+                ItemTemplate const* altProto = sObjectMgr->GetItemTemplate(li.itemid);
+                if (!altProto)
+                    continue;
 
-            if (!li.AllowedForPlayer(player, lootguid))
-                continue;
+                if (altProto->Class != ITEM_CLASS_ARMOR && altProto->Class != ITEM_CLASS_WEAPON)
+                    continue;
 
-            if (!IsUsableByClass(altProto, player))
-                continue;
+                if (altProto->Quality != requiredQuality)
+                    continue;
 
-            candidates.push_back(&li);
+                if (!li.AllowedForPlayer(player, sourceGuid))
+                    continue;
+
+                if (!IsUsableByClass(altProto, player))
+                    continue;
+
+                candidates.push_back({ &li, questItem, index, false });
+            }
+        };
+
+        collectCandidates(loot->items, false);
+        collectCandidates(loot->quest_items, true);
+
+        LootStore const* lootStore = nullptr;
+        uint32 lootId = 0;
+        if (lootguid.IsCreatureOrVehicle())
+        {
+            if (Creature* creature = ObjectAccessor::GetCreature(*player, lootguid))
+            {
+                lootStore = &LootTemplates_Creature;
+                lootId = creature->GetCreatureTemplate()->lootid;
+            }
+        }
+        else if (lootguid.IsGameObject())
+        {
+            if (GameObject* go = ObjectAccessor::GetGameObject(*player, lootguid))
+            {
+                lootStore = &LootTemplates_Gameobject;
+                lootId = go->GetGOInfo()->GetLootId();
+            }
+        }
+
+        if (lootStore && lootId)
+        {
+            std::vector<LootStoreItem const*> possibleItems;
+            lootStore->CollectPossibleItems(lootId, possibleItems);
+            templateItems.reserve(possibleItems.size());
+
+            for (LootStoreItem const* possibleItem : possibleItems)
+            {
+                if (!possibleItem || possibleItem->itemid == excludeItemId)
+                    continue;
+
+                ItemTemplate const* proto = sObjectMgr->GetItemTemplate(possibleItem->itemid);
+                if (!proto || (proto->Class != ITEM_CLASS_ARMOR && proto->Class != ITEM_CLASS_WEAPON))
+                    continue;
+
+                if (proto->Quality != requiredQuality || !IsUsableByClass(proto, player))
+                    continue;
+
+                templateItems.emplace_back(*possibleItem);
+                LootItem& candidate = templateItems.back();
+                candidate.count = std::max<uint8>(1, possibleItem->mincount);
+                if (!candidate.AllowedForPlayer(player, sourceGuid))
+                {
+                    templateItems.pop_back();
+                    continue;
+                }
+
+                candidates.push_back({ &candidate, false, 0, true });
+            }
         }
 
         if (candidates.empty())
             return false;
 
-        LootItem* selected = candidates[urand(0, static_cast<uint32>(candidates.size() - 1))];
-        if (player->StoreNewItemInBestSlots(selected->itemid, 1))
+        LootCandidate selected = candidates[urand(0, static_cast<uint32>(candidates.size() - 1))];
+        LootItem* selectedItem = selected.item;
+        ItemPosCountVec dest;
+        if (player->CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, selectedItem->itemid, selectedItem->count) == EQUIP_ERR_OK)
         {
-            selected->is_looted = true;
+            AllowedLooterSet looters = selectedItem->GetAllowedLooters();
+            Item* replacement = player->StoreNewItem(dest, selectedItem->itemid, true,
+                selectedItem->randomPropertyId, looters);
+            if (!replacement)
+                return false;
+
+            if (!selected.fromTemplate)
+            {
+                selectedItem->is_looted = true;
+                if (selected.questItem)
+                    loot->NotifyQuestItemRemoved(selected.lootIndex);
+                else
+                    loot->NotifyItemRemoved(selected.lootIndex);
+                --loot->unlootedCount;
+            }
 
             if (sConfigMgr->GetOption<bool>("ClassLootFilter.Announce", true))
                 ChatHandler(player->GetSession()).PSendSysMessage(

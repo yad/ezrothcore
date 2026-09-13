@@ -102,6 +102,7 @@ public:
     bool HasQuestDropForPlayer(Player const* player, LootTemplateMap const& store) const;
     // The same for active quests of the player
     void Process(Loot& loot, Player const* player, LootStore const& lootstore, uint16 lootMode, uint16 nonRefIterationsLeft) const;    // Rolls an item from the group (if any) and adds the item to the loot
+    void CollectPossibleItems(std::vector<LootStoreItem const*>& items) const;
     float RawTotalChance() const;                       // Overall chance for the group (without equal chanced items)
     float TotalChance() const;                          // Overall chance for the group
 
@@ -252,6 +253,16 @@ LootTemplate const* LootStore::GetLootFor(uint32 loot_id) const
         return nullptr;
 
     return tab->second;
+}
+
+void LootStore::CollectPossibleItems(uint32 loot_id, std::vector<LootStoreItem const*>& items) const
+{
+    LootTemplate const* lootTemplate = GetLootFor(loot_id);
+    if (!lootTemplate)
+        return;
+
+    std::set<uint32> visitedReferences;
+    lootTemplate->CollectPossibleItems(items, visitedReferences);
 }
 
 LootTemplate* LootStore::GetLootForConditionFill(uint32 loot_id) const
@@ -1258,6 +1269,15 @@ void LootTemplate::LootGroup::AddEntry(LootStoreItem* item)
         EqualChanced.push_back(item);
 }
 
+void LootTemplate::LootGroup::CollectPossibleItems(std::vector<LootStoreItem const*>& items) const
+{
+    for (LootStoreItem const* item : ExplicitlyChanced)
+        items.push_back(item);
+
+    for (LootStoreItem const* item : EqualChanced)
+        items.push_back(item);
+}
+
 // Rolls an item from the group, returns nullptr if all miss their chances
 LootStoreItem const* LootTemplate::LootGroup::Roll(Loot& loot, Player const* player, LootStore const& store, uint16 lootMode) const
 {
@@ -1661,6 +1681,39 @@ bool LootTemplate::CopyConditions(LootItem* li, uint32 conditionLootId) const
     }
 
     return false;
+}
+
+void LootTemplate::CollectPossibleItems(std::vector<LootStoreItem const*>& items, std::set<uint32>& visitedReferences) const
+{
+    auto collectItem = [&](LootStoreItem const* item)
+    {
+        if (!item->reference)
+        {
+            items.push_back(item);
+            return;
+        }
+
+        uint32 referenceId = std::abs(item->reference);
+        if (!visitedReferences.insert(referenceId).second)
+            return;
+
+        if (LootTemplate const* referencedTemplate = LootTemplates_Reference.GetLootFor(referenceId))
+            referencedTemplate->CollectPossibleItems(items, visitedReferences);
+    };
+
+    for (LootStoreItem const* item : Entries)
+        collectItem(item);
+
+    for (LootGroup const* group : Groups)
+    {
+        if (!group)
+            continue;
+
+        std::vector<LootStoreItem const*> groupItems;
+        group->CollectPossibleItems(groupItems);
+        for (LootStoreItem const* item : groupItems)
+            collectItem(item);
+    }
 }
 
 // Rolls for every item in the template and adds the rolled items the the loot
