@@ -287,6 +287,10 @@ namespace
         {
             if (!sConfigMgr->GetOption<bool>("ClassLootFilter.FilterArmor", true))
                 return true;
+
+            if (proto->InventoryType == INVTYPE_CLOAK)
+                return true;
+
             return IsArmorSubclassAccepted(player, proto->SubClass);
         }
 
