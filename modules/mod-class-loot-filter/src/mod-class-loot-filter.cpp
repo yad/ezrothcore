@@ -58,6 +58,7 @@
 #include "Random.h"
 
 #include <initializer_list>
+#include <sstream>
 #include <vector>
 #include <algorithm>
 
@@ -304,6 +305,23 @@ namespace
         return true;
     }
 
+    std::string GetItemLink(uint32 itemId, Player* player)
+    {
+        ItemTemplate const* proto = sObjectMgr->GetItemTemplate(itemId);
+        if (!proto)
+            return "";
+
+        int localeIndex = player->GetSession()->GetSessionDbLocaleIndex();
+        std::string name = proto->Name1;
+        if (ItemLocale const* itemLocale = sObjectMgr->GetItemLocale(itemId))
+            ObjectMgr::GetLocaleString(itemLocale->Name, localeIndex, name);
+
+        std::ostringstream itemLink;
+        itemLink << "|c" << std::hex << ItemQualityColors[proto->Quality] << std::dec
+            << "|Hitem:" << itemId << ":0:0:0:0:0:0:0:0:0|h[" << name << "]|h|r";
+        return itemLink.str();
+    }
+
     Loot* GetLootFromGuid(Player* player, ObjectGuid const& lootguid)
     {
         if (lootguid.IsCreatureOrVehicle())
@@ -488,9 +506,10 @@ namespace
                 --loot->unlootedCount;
             }
 
+            std::string replacementLink = GetItemLink(selectedItem->itemid, player);
             if (sConfigMgr->GetOption<bool>("ClassLootFilter.Announce", true))
                 ChatHandler(player->GetSession()).PSendSysMessage(
-                    "|cffff8000[ClassLootFilter]|r Objet remplacé par une pièce adaptée à votre classe.");
+                    "|cffff8000[Maître du Jeu]|r Objet remplacé par %s, une pièce adaptée à votre classe.", replacementLink.c_str());
 
             return true;
         }
@@ -603,6 +622,7 @@ public:
         uint8 slot = item->GetSlot();
         uint32 itemId = proto->ItemId;
         uint32 removedCount = item->GetCount();
+        std::string itemLink = GetItemLink(itemId, player);
 
         player->DestroyItem(bag, slot, true);
 
@@ -616,7 +636,7 @@ public:
 
             if (sConfigMgr->GetOption<bool>("ClassLootFilter.Announce", true))
                 ChatHandler(player->GetSession()).PSendSysMessage(
-                    "|cffff8000[ClassLootFilter]|r Aucun remplacement adapté trouvé, l'objet d'origine vous est rendu.");
+                    "|cffff8000[Maître du Jeu]|r Aucun remplacement adapté trouvé, %s vous est rendu.", itemLink.c_str());
         }
     }
 };
