@@ -584,6 +584,10 @@ public:
 
     void OnPlayerLootItem(Player* player, Item* item, uint32 /*count*/, ObjectGuid lootguid) override
     {
+        static thread_local bool replacementInProgress = false;
+        if (replacementInProgress)
+            return;
+
         if (!sConfigMgr->GetOption<bool>("ClassLootFilter.Enable", true))
             return;
 
@@ -623,6 +627,14 @@ public:
         uint32 itemId = proto->ItemId;
         uint32 removedCount = item->GetCount();
         std::string itemLink = GetItemLink(itemId, player);
+
+        struct ReplacementGuard
+        {
+            bool& active;
+
+            explicit ReplacementGuard(bool& active) : active(active) { active = true; }
+            ~ReplacementGuard() { active = false; }
+        } replacementGuard(replacementInProgress);
 
         player->DestroyItem(bag, slot, true);
 
