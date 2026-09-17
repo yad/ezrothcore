@@ -499,17 +499,13 @@ namespace
             if (!selected.fromTemplate)
             {
                 selectedItem->is_looted = true;
-                if (selected.questItem)
-                    loot->NotifyQuestItemRemoved(selected.lootIndex);
-                else
-                    loot->NotifyItemRemoved(selected.lootIndex);
                 --loot->unlootedCount;
             }
 
             std::string replacementLink = GetItemLink(selectedItem->itemid, player);
             if (sConfigMgr->GetOption<bool>("ClassLootFilter.Announce", true))
                 ChatHandler(player->GetSession()).PSendSysMessage(
-                    "|cffff8000[Maître du Jeu]|r Objet remplacé par %s, une pièce adaptée à votre classe.", replacementLink.c_str());
+                    "|cffff8000[Maître du Jeu]|r Objet remplacé par {}, une pièce adaptée à votre classe.", replacementLink.c_str());
 
             return true;
         }
