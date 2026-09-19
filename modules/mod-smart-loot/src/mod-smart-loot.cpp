@@ -29,7 +29,6 @@
  *     la version du core, la valeur BoE peut s'appeler BIND_WHEN_EQUIPPED
  *     (deux P) ou BIND_WHEN_EQUIPED (un seul P) — grep pour confirmer.
  *   - Membre Loot::sourceWorldObjectGUID (LootMgr.h)
- *   - Existence de Player::StoreNewItemInBestSlots(uint32 itemId, uint32 count)
  *   - Membres de LootItem (itemid, is_looted, AllowedForPlayer)
  *   - ObjectGuid::IsCreatureOrVehicle() / IsGameObject()
  *   - Player::HasSkill(uint32 skill) et les constantes SKILL_MAIL /
@@ -66,6 +65,23 @@
 
 namespace
 {
+    struct SmartLootConfig
+    {
+        static inline bool Enable = true;
+        static inline bool ExcludeBots = true;
+        static inline bool OnlyBosses = false;
+        static inline bool SmartLootEnable = true;
+        static inline float SmartLootBoostFactor = 2.0f;
+        static inline float SmartLootPenaltyFactor = 0.3f;
+        static inline bool OnlyBindOnEquip = true;
+        static inline bool FilterArmor = true;
+        static inline bool StrictArmorPreference = true;
+        static inline bool FilterWeapons = false;
+        static inline uint32 MinItemLevel = 1;
+        static inline bool TryAlternateItem = true;
+        static inline bool Announce = true;
+    };
+
     // ---------------------------------------------------------------------
     // Ancienne table "permissive" (tout ce que la classe PEUT porter).
     // Conservée pour SmartLoot.StrictArmorPreference = 0.
@@ -185,7 +201,7 @@ namespace
             case ITEM_SUBCLASS_ARMOR_LEATHER:
             case ITEM_SUBCLASS_ARMOR_MAIL:
             case ITEM_SUBCLASS_ARMOR_PLATE:
-                if (!sConfigMgr->GetOption<bool>("SmartLoot.StrictArmorPreference", true))
+                if (!SmartLootConfig::StrictArmorPreference)
                     return CanWearArmorSubclass(playerClass, subclass);
                 return subclass == GetPreferredArmorSubclass(player);
 
@@ -288,7 +304,7 @@ namespace
 
         if (proto->Class == ITEM_CLASS_ARMOR)
         {
-            if (!sConfigMgr->GetOption<bool>("SmartLoot.FilterArmor", true))
+            if (!SmartLootConfig::FilterArmor)
                 return true;
 
             if (proto->InventoryType == INVTYPE_CLOAK)
@@ -299,7 +315,7 @@ namespace
 
         if (proto->Class == ITEM_CLASS_WEAPON)
         {
-            if (!sConfigMgr->GetOption<bool>("SmartLoot.FilterWeapons", false))
+            if (!SmartLootConfig::FilterWeapons)
                 return true;
             return CanUseWeaponSubclass(playerClass, proto->SubClass);
         }
@@ -360,7 +376,7 @@ namespace
     std::vector<Player*> GetHumanGroupMembers(Player* player)
     {
         std::vector<Player*> humans;
-        bool excludeBots = sConfigMgr->GetOption<bool>("SmartLoot.ExcludeBots", true);
+        bool excludeBots = SmartLootConfig::ExcludeBots;
 
         if (Group* group = player->GetGroup())
         {
@@ -406,7 +422,14 @@ namespace
             for (size_t index = 0; index < items.size(); ++index)
             {
                 LootItem& li = items[index];
-                if (li.is_looted || li.is_blocked || li.itemid == excludeItemId)
+                if (li.is_looted || li.is_blocked || li.freeforall || li.needs_quest || !li.conditions.empty()
+                    || li.itemid == excludeItemId)
+                    continue;
+
+                if (li.rollWinnerGUID && li.rollWinnerGUID != player->GetGUID())
+                    continue;
+
+                if (loot->roundRobinPlayer && loot->roundRobinPlayer != player->GetGUID() && li.is_underthreshold)
                     continue;
 
                 ItemTemplate const* altProto = sObjectMgr->GetItemTemplate(li.itemid);
@@ -451,7 +474,7 @@ namespace
             }
         }
 
-        if (lootStore && lootId)
+        if (candidates.empty() && lootStore && lootId)
         {
             std::vector<LootStoreItem const*> possibleItems;
             lootStore->CollectPossibleItems(lootId, possibleItems);
@@ -488,7 +511,8 @@ namespace
         LootCandidate selected = candidates[urand(0, static_cast<uint32>(candidates.size() - 1))];
         LootItem* selectedItem = selected.item;
         ItemPosCountVec dest;
-        if (player->CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, selectedItem->itemid, selectedItem->count) == EQUIP_ERR_OK)
+        if (player->CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, selectedItem->itemid,
+            selectedItem->count) == EQUIP_ERR_OK)
         {
             AllowedLooterSet looters = selectedItem->GetAllowedLooters();
             Item* replacement = player->StoreNewItem(dest, selectedItem->itemid, true,
@@ -499,13 +523,16 @@ namespace
             if (!selected.fromTemplate)
             {
                 selectedItem->is_looted = true;
-                --loot->unlootedCount;
+                if (loot->unlootedCount > 0)
+                    --loot->unlootedCount;
+                loot->NotifyItemRemoved(selectedItem->itemIndex);
             }
 
             std::string replacementLink = GetItemLink(selectedItem->itemid, player);
-            if (sConfigMgr->GetOption<bool>("SmartLoot.Announce", true))
+            if (SmartLootConfig::Announce)
                 ChatHandler(player->GetSession()).PSendSysMessage(
-                    "|cffff8000[Maître du Jeu]|r Objet remplacé par {}, une pièce adaptée à votre classe.", replacementLink.c_str());
+                    "|cffff8000[Maître du Jeu]|r Objet remplacé par {}, une pièce adaptée à votre classe.",
+                    replacementLink);
 
             return true;
         }
@@ -515,28 +542,52 @@ namespace
 
 }
 
+class SmartLoot_WorldScript : public WorldScript
+{
+public:
+    SmartLoot_WorldScript() : WorldScript("SmartLoot_WorldScript", {
+        WORLDHOOK_ON_AFTER_CONFIG_LOAD
+    }) { }
+
+    void OnAfterConfigLoad(bool /*reload*/) override
+    {
+        SmartLootConfig::Enable = sConfigMgr->GetOption<bool>("SmartLoot.Enable", true);
+        SmartLootConfig::ExcludeBots = sConfigMgr->GetOption<bool>("SmartLoot.ExcludeBots", true);
+        SmartLootConfig::OnlyBosses = sConfigMgr->GetOption<bool>("SmartLoot.OnlyBosses", false);
+        SmartLootConfig::SmartLootEnable = sConfigMgr->GetOption<bool>("SmartLoot.SmartLootEnable", true);
+        SmartLootConfig::SmartLootBoostFactor = std::max(0.0f,
+            sConfigMgr->GetOption<float>("SmartLoot.SmartLootBoostFactor", 2.0f));
+        SmartLootConfig::SmartLootPenaltyFactor = std::max(0.0f,
+            sConfigMgr->GetOption<float>("SmartLoot.SmartLootPenaltyFactor", 0.3f));
+        SmartLootConfig::OnlyBindOnEquip = sConfigMgr->GetOption<bool>("SmartLoot.OnlyBindOnEquip", true);
+        SmartLootConfig::FilterArmor = sConfigMgr->GetOption<bool>("SmartLoot.FilterArmor", true);
+        SmartLootConfig::StrictArmorPreference = sConfigMgr->GetOption<bool>("SmartLoot.StrictArmorPreference", true);
+        SmartLootConfig::FilterWeapons = sConfigMgr->GetOption<bool>("SmartLoot.FilterWeapons", false);
+        SmartLootConfig::MinItemLevel = sConfigMgr->GetOption<uint32>("SmartLoot.MinItemLevel", 1);
+        SmartLootConfig::TryAlternateItem = sConfigMgr->GetOption<bool>("SmartLoot.TryAlternateItem", true);
+        SmartLootConfig::Announce = sConfigMgr->GetOption<bool>("SmartLoot.Announce", true);
+    }
+};
+
 class SmartLoot_GlobalScript : public GlobalScript
 {
 public:
-    SmartLoot_GlobalScript() : GlobalScript("SmartLoot_GlobalScript") { }
+    SmartLoot_GlobalScript() : GlobalScript("SmartLoot_GlobalScript", {
+        GLOBALHOOK_ON_ITEM_ROLL
+    }) { }
 
     // "Smart loot" : pondère la chance de drop des pièces SOULBOUND (BoP)
     // sur les boss de donjon/raid selon les classes des joueurs humains du
     // groupe. Ne touche jamais au BoE (géré par OnLootItem) ni aux boss de
     // monde ouvert / trashs.
-    bool OnItemRoll(Player const* player, LootStoreItem const* lootStoreItem, float& chance, Loot& loot, LootStore const& /*store*/) override
+    bool OnItemRoll(Player const* player, LootStoreItem const* lootStoreItem, float& chance, Loot& loot,
+        LootStore const& /*store*/) override
     {
-        if (!sConfigMgr->GetOption<bool>("SmartLoot.SmartLootEnable", true))
+        if (!SmartLootConfig::SmartLootEnable)
             return true;
 
         if (!player || !lootStoreItem)
             return true;
-
-        Player* nonConstPlayer = const_cast<Player*>(player);
-
-        Creature* creature = ObjectAccessor::GetCreature(*nonConstPlayer, loot.sourceWorldObjectGUID);
-        if (!creature || !creature->IsDungeonBoss())
-            return true; // uniquement les boss de donjon/raid
 
         ItemTemplate const* proto = sObjectMgr->GetItemTemplate(lootStoreItem->itemid);
         if (!proto)
@@ -548,6 +599,12 @@ public:
 
         if (proto->Bonding != BIND_WHEN_PICKED_UP)
             return true;
+
+        Player* nonConstPlayer = const_cast<Player*>(player);
+
+        Creature* creature = ObjectAccessor::GetCreature(*nonConstPlayer, loot.sourceWorldObjectGUID);
+        if (!creature || !creature->IsDungeonBoss())
+            return true; // uniquement les boss de donjon/raid
 
         std::vector<Player*> humans = GetHumanGroupMembers(nonConstPlayer);
         if (humans.empty())
@@ -564,8 +621,8 @@ public:
         }
 
         float factor = usefulForAtLeastOneHuman
-            ? sConfigMgr->GetOption<float>("SmartLoot.SmartLootBoostFactor", 2.0f)
-            : sConfigMgr->GetOption<float>("SmartLoot.SmartLootPenaltyFactor", 0.3f);
+            ? SmartLootConfig::SmartLootBoostFactor
+            : SmartLootConfig::SmartLootPenaltyFactor;
 
         chance = std::max(0.0f, std::min(chance * factor, 100.0f));
 
@@ -576,52 +633,54 @@ public:
 class SmartLoot_PlayerScript : public PlayerScript
 {
 public:
-    SmartLoot_PlayerScript() : PlayerScript("SmartLoot_PlayerScript") { }
+    SmartLoot_PlayerScript() : PlayerScript("SmartLoot_PlayerScript", {
+        PLAYERHOOK_ON_LOOT_ITEM
+    }) { }
 
-    void OnPlayerLootItem(Player* player, Item* item, uint32 /*count*/, ObjectGuid lootguid) override
+    void OnPlayerLootItem(Player* player, Item* item, uint32 count, ObjectGuid lootguid) override
     {
         static thread_local bool replacementInProgress = false;
         if (replacementInProgress)
             return;
 
-        if (!sConfigMgr->GetOption<bool>("SmartLoot.Enable", true))
+        if (!SmartLootConfig::Enable)
             return;
 
         if (!player || !item)
             return;
 
-        if (sConfigMgr->GetOption<bool>("SmartLoot.ExcludeBots", true) && IsPlayerBot(player))
+        if (SmartLootConfig::ExcludeBots && IsPlayerBot(player))
             return; // on ne touche pas au loot des playerbots
 
         bool isBossLoot = IsDungeonOrRaidBossLoot(player, lootguid);
 
-        if (sConfigMgr->GetOption<bool>("SmartLoot.OnlyBosses", false) && !isBossLoot)
+        if (SmartLootConfig::OnlyBosses && !isBossLoot)
             return; // mode restreint aux boss de donjon/raid uniquement
 
         ItemTemplate const* proto = item->GetTemplate();
         if (!proto)
             return;
 
+        if (count != 1 || proto->GetMaxStackSize() != 1)
+            return;
+
         // On ne s'occupe que des armures et armes
         if (proto->Class != ITEM_CLASS_ARMOR && proto->Class != ITEM_CLASS_WEAPON)
             return;
 
-        if (sConfigMgr->GetOption<bool>("SmartLoot.OnlyBindOnEquip", true)
+        if (SmartLootConfig::OnlyBindOnEquip
             && proto->Bonding != BIND_WHEN_EQUIPPED)
             return;
 
-        uint32 minIlvl = sConfigMgr->GetOption<uint32>("SmartLoot.MinItemLevel", 1);
+        uint32 minIlvl = SmartLootConfig::MinItemLevel;
         if (proto->ItemLevel < minIlvl)
             return;
 
         if (IsUsableByClass(proto, player))
             return; // rien a faire, la piece convient a la classe
 
-        // La piece ne convient pas : on la retire de l'inventaire du joueur
-        uint8 bag = item->GetBagSlot();
-        uint8 slot = item->GetSlot();
+        // La piece ne convient pas : on ne la retire qu'apres avoir stocke son remplacement.
         uint32 itemId = proto->ItemId;
-        uint32 removedCount = item->GetCount();
         std::string itemLink = GetItemLink(itemId, player);
 
         struct ReplacementGuard
@@ -632,19 +691,19 @@ public:
             ~ReplacementGuard() { active = false; }
         } replacementGuard(replacementInProgress);
 
-        player->DestroyItem(bag, slot, true);
-
         bool replaced = false;
-        if (sConfigMgr->GetOption<bool>("SmartLoot.TryAlternateItem", true))
+        if (SmartLootConfig::TryAlternateItem)
             replaced = TryGrantAlternateItem(player, lootguid, itemId, proto->Quality);
 
-        if (!replaced)
+        if (replaced)
         {
-            player->StoreNewItemInBestSlots(itemId, removedCount);
-
-            if (sConfigMgr->GetOption<bool>("SmartLoot.Announce", true))
-                ChatHandler(player->GetSession()).PSendSysMessage(
-                    "|cffff8000[Maître du Jeu]|r Aucun remplacement adapté trouvé, %s vous est rendu.", itemLink.c_str());
+            uint32 countToRemove = count;
+            player->DestroyItemCount(item, countToRemove, true);
+        }
+        else if (SmartLootConfig::Announce)
+        {
+            ChatHandler(player->GetSession()).PSendSysMessage(
+                "|cffff8000[Maître du Jeu]|r Aucun remplacement adapté trouvé, {} vous est conservé.", itemLink);
         }
     }
 };
@@ -654,6 +713,7 @@ public:
 // comme cela avait déjà été fait pour mod-parangon.
 void Addmod_smart_lootScripts()
 {
+    new SmartLoot_WorldScript();
     new SmartLoot_PlayerScript();
     new SmartLoot_GlobalScript();
 }
