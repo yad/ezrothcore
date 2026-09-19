@@ -1,6 +1,6 @@
 /*
- * mod-class-loot-filter
- * ----------------------
+ * mod-smart-loot
+ * --------------
  * Deux comportements DISTINCTS :
  *
  * 1) BoE (Bind on Equip) sur créatures/coffres, tous types de mobs :
@@ -66,7 +66,7 @@ namespace
 {
     // ---------------------------------------------------------------------
     // Ancienne table "permissive" (tout ce que la classe PEUT porter).
-    // Conservée pour ClassLootFilter.StrictArmorPreference = 0.
+    // Conservée pour SmartLoot.StrictArmorPreference = 0.
     // ---------------------------------------------------------------------
     bool CanWearArmorSubclass(uint8 playerClass, uint32 subclass)
     {
@@ -183,7 +183,7 @@ namespace
             case ITEM_SUBCLASS_ARMOR_LEATHER:
             case ITEM_SUBCLASS_ARMOR_MAIL:
             case ITEM_SUBCLASS_ARMOR_PLATE:
-                if (!sConfigMgr->GetOption<bool>("ClassLootFilter.StrictArmorPreference", true))
+                if (!sConfigMgr->GetOption<bool>("SmartLoot.StrictArmorPreference", true))
                     return CanWearArmorSubclass(playerClass, subclass);
                 return subclass == GetPreferredArmorSubclass(player);
 
@@ -194,7 +194,7 @@ namespace
 
     // ---------------------------------------------------------------------
     // Table de proficience d'armes par classe (approximatif, WotLK classique).
-    // Désactivée par défaut (ClassLootFilter.FilterWeapons = 0) : à activer
+    // Désactivée par défaut (SmartLoot.FilterWeapons = 0) : à activer
     // volontairement une fois la table validée pour votre serveur.
     // ---------------------------------------------------------------------
     bool CanUseWeaponSubclass(uint8 playerClass, uint32 subclass)
@@ -286,7 +286,7 @@ namespace
 
         if (proto->Class == ITEM_CLASS_ARMOR)
         {
-            if (!sConfigMgr->GetOption<bool>("ClassLootFilter.FilterArmor", true))
+            if (!sConfigMgr->GetOption<bool>("SmartLoot.FilterArmor", true))
                 return true;
 
             if (proto->InventoryType == INVTYPE_CLOAK)
@@ -297,7 +297,7 @@ namespace
 
         if (proto->Class == ITEM_CLASS_WEAPON)
         {
-            if (!sConfigMgr->GetOption<bool>("ClassLootFilter.FilterWeapons", false))
+            if (!sConfigMgr->GetOption<bool>("SmartLoot.FilterWeapons", false))
                 return true;
             return CanUseWeaponSubclass(playerClass, proto->SubClass);
         }
@@ -358,7 +358,7 @@ namespace
     std::vector<Player*> GetHumanGroupMembers(Player* player)
     {
         std::vector<Player*> humans;
-        bool excludeBots = sConfigMgr->GetOption<bool>("ClassLootFilter.ExcludeBots", true);
+        bool excludeBots = sConfigMgr->GetOption<bool>("SmartLoot.ExcludeBots", true);
 
         if (Group* group = player->GetGroup())
         {
@@ -503,7 +503,7 @@ namespace
             }
 
             std::string replacementLink = GetItemLink(selectedItem->itemid, player);
-            if (sConfigMgr->GetOption<bool>("ClassLootFilter.Announce", true))
+            if (sConfigMgr->GetOption<bool>("SmartLoot.Announce", true))
                 ChatHandler(player->GetSession()).PSendSysMessage(
                     "|cffff8000[Maître du Jeu]|r Objet remplacé par {}, une pièce adaptée à votre classe.", replacementLink.c_str());
 
@@ -515,10 +515,10 @@ namespace
 
 }
 
-class ClassLootFilter_GlobalScript : public GlobalScript
+class SmartLoot_GlobalScript : public GlobalScript
 {
 public:
-    ClassLootFilter_GlobalScript() : GlobalScript("ClassLootFilter_GlobalScript") { }
+    SmartLoot_GlobalScript() : GlobalScript("SmartLoot_GlobalScript") { }
 
     // "Smart loot" : pondère la chance de drop des pièces SOULBOUND (BoP)
     // sur les boss de donjon/raid selon les classes des joueurs humains du
@@ -526,7 +526,7 @@ public:
     // monde ouvert / trashs.
     bool OnItemRoll(Player const* player, LootStoreItem const* lootStoreItem, float& chance, Loot& loot, LootStore const& /*store*/) override
     {
-        if (!sConfigMgr->GetOption<bool>("ClassLootFilter.SmartLootEnable", true))
+        if (!sConfigMgr->GetOption<bool>("SmartLoot.SmartLootEnable", true))
             return true;
 
         if (!player || !lootStoreItem)
@@ -564,8 +564,8 @@ public:
         }
 
         float factor = usefulForAtLeastOneHuman
-            ? sConfigMgr->GetOption<float>("ClassLootFilter.SmartLootBoostFactor", 2.0f)
-            : sConfigMgr->GetOption<float>("ClassLootFilter.SmartLootPenaltyFactor", 0.3f);
+            ? sConfigMgr->GetOption<float>("SmartLoot.SmartLootBoostFactor", 2.0f)
+            : sConfigMgr->GetOption<float>("SmartLoot.SmartLootPenaltyFactor", 0.3f);
 
         chance = std::max(0.0f, std::min(chance * factor, 100.0f));
 
@@ -573,10 +573,10 @@ public:
     }
 };
 
-class ClassLootFilter_PlayerScript : public PlayerScript
+class SmartLoot_PlayerScript : public PlayerScript
 {
 public:
-    ClassLootFilter_PlayerScript() : PlayerScript("ClassLootFilter_PlayerScript") { }
+    SmartLoot_PlayerScript() : PlayerScript("SmartLoot_PlayerScript") { }
 
     void OnPlayerLootItem(Player* player, Item* item, uint32 /*count*/, ObjectGuid lootguid) override
     {
@@ -584,18 +584,18 @@ public:
         if (replacementInProgress)
             return;
 
-        if (!sConfigMgr->GetOption<bool>("ClassLootFilter.Enable", true))
+        if (!sConfigMgr->GetOption<bool>("SmartLoot.Enable", true))
             return;
 
         if (!player || !item)
             return;
 
-        if (sConfigMgr->GetOption<bool>("ClassLootFilter.ExcludeBots", true) && IsPlayerBot(player))
+        if (sConfigMgr->GetOption<bool>("SmartLoot.ExcludeBots", true) && IsPlayerBot(player))
             return; // on ne touche pas au loot des playerbots
 
         bool isBossLoot = IsDungeonOrRaidBossLoot(player, lootguid);
 
-        if (sConfigMgr->GetOption<bool>("ClassLootFilter.OnlyBosses", false) && !isBossLoot)
+        if (sConfigMgr->GetOption<bool>("SmartLoot.OnlyBosses", false) && !isBossLoot)
             return; // mode restreint aux boss de donjon/raid uniquement
 
         ItemTemplate const* proto = item->GetTemplate();
@@ -606,11 +606,11 @@ public:
         if (proto->Class != ITEM_CLASS_ARMOR && proto->Class != ITEM_CLASS_WEAPON)
             return;
 
-        if (sConfigMgr->GetOption<bool>("ClassLootFilter.OnlyBindOnEquip", true)
+        if (sConfigMgr->GetOption<bool>("SmartLoot.OnlyBindOnEquip", true)
             && proto->Bonding != BIND_WHEN_EQUIPPED)
             return;
 
-        uint32 minIlvl = sConfigMgr->GetOption<uint32>("ClassLootFilter.MinItemLevel", 1);
+        uint32 minIlvl = sConfigMgr->GetOption<uint32>("SmartLoot.MinItemLevel", 1);
         if (proto->ItemLevel < minIlvl)
             return;
 
@@ -635,14 +635,14 @@ public:
         player->DestroyItem(bag, slot, true);
 
         bool replaced = false;
-        if (sConfigMgr->GetOption<bool>("ClassLootFilter.TryAlternateItem", true))
+        if (sConfigMgr->GetOption<bool>("SmartLoot.TryAlternateItem", true))
             replaced = TryGrantAlternateItem(player, lootguid, itemId, proto->Quality);
 
         if (!replaced)
         {
             player->StoreNewItemInBestSlots(itemId, removedCount);
 
-            if (sConfigMgr->GetOption<bool>("ClassLootFilter.Announce", true))
+            if (sConfigMgr->GetOption<bool>("SmartLoot.Announce", true))
                 ChatHandler(player->GetSession()).PSendSysMessage(
                     "|cffff8000[Maître du Jeu]|r Aucun remplacement adapté trouvé, %s vous est rendu.", itemLink.c_str());
         }
@@ -652,8 +652,8 @@ public:
 // Le nom de cette fonction doit correspondre à la convention de votre
 // chargeur de modules (basée sur le nom du dossier). Ajuster si besoin,
 // comme cela avait déjà été fait pour mod-parangon.
-void Addmod_class_loot_filterScripts()
+void Addmod_smart_lootScripts()
 {
-    new ClassLootFilter_PlayerScript();
-    new ClassLootFilter_GlobalScript();
+    new SmartLoot_PlayerScript();
+    new SmartLoot_GlobalScript();
 }

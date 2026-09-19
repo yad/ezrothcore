@@ -1,16 +1,16 @@
 [worldserver]
 
 ########################################
-# ClassLootFilter (mod-class-loot-filter)
+# SmartLoot (mod-smart-loot)
 ########################################
 #
-#    ClassLootFilter.Enable
+#    SmartLoot.Enable
 #        Description: Active ou désactive le module.
 #        Default:     1
 
-ClassLootFilter.Enable = 1
+SmartLoot.Enable = 1
 
-#    ClassLootFilter.ExcludeBots
+#    SmartLoot.ExcludeBots
 #        Description: Ignore les personnages contrôlés par mod-playerbots
 #                      (bots d'équipe ou bots aléatoires) : leur loot n'est
 #                      jamais retiré/remplacé/rendu, seuls les vrais
@@ -18,15 +18,15 @@ ClassLootFilter.Enable = 1
 #                      Nécessite mod-playerbots présent dans l'arbre.
 #        Default:     1
 
-ClassLootFilter.ExcludeBots = 1
+SmartLoot.ExcludeBots = 1
 
-#    ClassLootFilter.OnlyBosses
+#    SmartLoot.OnlyBosses
 #        Description: Si activé, le module n'agit QUE sur le loot des boss
 #                      de donjon/raid (créature avec le flag "Dungeon Boss").
 #                      Le loot des trashs et des coffres n'est plus touché.
 #        Default:     0
 
-ClassLootFilter.OnlyBosses = 0
+SmartLoot.OnlyBosses = 0
 
 ########################################
 # Smart loot BoP sur boss (donjon/raid)
@@ -37,24 +37,24 @@ ClassLootFilter.OnlyBosses = 0
 # BoE, ni les trashs, ni les boss de monde ouvert.
 #
 # Réutilise les mêmes définitions de préférence de classe que le BoE
-# (ClassLootFilter.FilterArmor, ClassLootFilter.StrictArmorPreference,
-# ClassLootFilter.FilterWeapons ci-dessus).
+# (SmartLoot.FilterArmor, SmartLoot.StrictArmorPreference,
+# SmartLoot.FilterWeapons ci-dessus).
 
-#    ClassLootFilter.SmartLootEnable
+#    SmartLoot.SmartLootEnable
 #        Description: Active le smart loot BoP sur les boss.
 #        Default:     1
 
-ClassLootFilter.SmartLootEnable = 1
+SmartLoot.SmartLootEnable = 1
 
-#    ClassLootFilter.SmartLootBoostFactor
+#    SmartLoot.SmartLootBoostFactor
 #        Description: Multiplicateur appliqué à la chance de drop d'une
 #                      pièce utilisable par au moins un joueur humain du
 #                      groupe.
 #        Default:     2.0
 
-ClassLootFilter.SmartLootBoostFactor = 2.0
+SmartLoot.SmartLootBoostFactor = 2.0
 
-#    ClassLootFilter.SmartLootPenaltyFactor
+#    SmartLoot.SmartLootPenaltyFactor
 #        Description: Multiplicateur appliqué à la chance de drop d'une
 #                      pièce inutilisable par tous les joueurs humains du
 #                      groupe (mais potentiellement utile à un bot).
@@ -62,24 +62,24 @@ ClassLootFilter.SmartLootBoostFactor = 2.0
 #                      complètement les tables de butin.
 #        Default:     0.3
 
-ClassLootFilter.SmartLootPenaltyFactor = 0.3
+SmartLoot.SmartLootPenaltyFactor = 0.3
 
-#    ClassLootFilter.OnlyBindOnEquip
+#    SmartLoot.OnlyBindOnEquip
 #        Description: Ne filtrer que les objets "Lié quand équipé" (BoE).
 #                      Laisser à 1 pour ne pas toucher aux BoP (déjà gérés
 #                      par le système de loot standard / need-before-greed).
 #        Default:     1
 
-ClassLootFilter.OnlyBindOnEquip = 1
+SmartLoot.OnlyBindOnEquip = 1
 
-#    ClassLootFilter.FilterArmor
+#    SmartLoot.FilterArmor
 #        Description: Filtrer les armures (tissu/cuir/mailles/plaques,
 #                      boucliers, reliques) selon la classe du joueur.
 #        Default:     1
 
-ClassLootFilter.FilterArmor = 1
+SmartLoot.FilterArmor = 1
 
-#    ClassLootFilter.StrictArmorPreference
+#    SmartLoot.StrictArmorPreference
 #        Description: Mode strict : chaque classe n'accepte qu'UN SEUL type
 #                      d'armure "préféré" (avec repli auto si le skill n'est
 #                      pas encore acquis) au lieu de tout ce qu'elle peut
@@ -93,34 +93,34 @@ ClassLootFilter.FilterArmor = 1
 #                      accepté, ex: un guerrier garde aussi le cuir/tissu).
 #        Default:     1
 
-ClassLootFilter.StrictArmorPreference = 1
+SmartLoot.StrictArmorPreference = 1
 
-#    ClassLootFilter.FilterWeapons
+#    SmartLoot.FilterWeapons
 #        Description: Filtrer les armes selon la proficience de classe.
 #                      Table approximative (règles classiques WotLK) :
 #                      à valider avant activation.
 #        Default:     0
 
-ClassLootFilter.FilterWeapons = 1
+SmartLoot.FilterWeapons = 1
 
-#    ClassLootFilter.MinItemLevel
+#    SmartLoot.MinItemLevel
 #        Description: Niveau d'objet minimum à partir duquel le filtre
 #                      s'applique (évite de toucher au loot trivial/gris).
 #        Default:     1
 
-ClassLootFilter.MinItemLevel = 1
+SmartLoot.MinItemLevel = 1
 
-#    ClassLootFilter.TryAlternateItem
+#    SmartLoot.TryAlternateItem
 #        Description: Si activé, avant de rendre l'objet d'origine, le module
 #                      tente de donner à la place un autre objet de même
 #                      qualité du MÊME butin, utilisable par la classe.
 #        Default:     1
 
-ClassLootFilter.TryAlternateItem = 1
+SmartLoot.TryAlternateItem = 1
 
-#    ClassLootFilter.Announce
+#    SmartLoot.Announce
 #        Description: Annoncer en chat au joueur qu'un objet a été
 #                      remplacé ou rendu.
 #        Default:     1
 
-ClassLootFilter.Announce = 1
+SmartLoot.Announce = 1
