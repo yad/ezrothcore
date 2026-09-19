@@ -1,0 +1,17 @@
+[worldserver]
+
+########################################
+# BonusLoot (mod-bonus-loot)
+########################################
+
+# Active ou desactive le bonus d'armure.
+BonusLoot.Enable = 1
+
+# Ignore les playerbots. Les joueurs humains du groupe restent eligibles.
+BonusLoot.ExcludeBots = 1
+
+# Si active, donne uniquement le type d'armure prefere par la classe.
+BonusLoot.StrictArmorPreference = 1
+
+# Annonce l'attribution du bonus dans le chat.
+BonusLoot.Announce = 1
