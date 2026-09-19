@@ -1,6 +1,7 @@
 #include "Chat.h"
 #include "Config.h"
 #include "Creature.h"
+#include "DataMap.h"
 #include "DatabaseEnv.h"
 #include "GameObject.h"
 #include "Group.h"
@@ -19,6 +20,11 @@
 
 namespace
 {
+    struct BonusLootPlayerState : public DataMap::Base
+    {
+        ObjectGuid lastLootSource;
+    };
+
     struct BonusLootConfig
     {
         static inline bool Enable = true;
@@ -123,6 +129,16 @@ namespace
         return quality == ITEM_QUALITY_UNCOMMON || quality == ITEM_QUALITY_RARE || quality == ITEM_QUALITY_EPIC;
     }
 
+    bool HasAlreadyReceivedBonus(Player* player, ObjectGuid lootGuid)
+    {
+        BonusLootPlayerState* state = player->CustomData.GetDefault<BonusLootPlayerState>("BonusLootPlayerState");
+        if (state->lastLootSource == lootGuid)
+            return true;
+
+        state->lastLootSource = lootGuid;
+        return false;
+    }
+
     std::vector<Player*> GetRecipients(Player* player)
     {
         std::vector<Player*> recipients;
@@ -152,7 +168,7 @@ namespace
 
         CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
         mailItem->SaveToDB(trans);
-        MailDraft("Butin bonus", "Votre inventaire etait plein. Votre piece d'armure bonus vous attend par courrier.")
+        MailDraft("Butin bonus", "Votre inventaire était plein. Votre pièce d'armure bonus vous attend par courrier.")
             .AddItem(mailItem)
             .SendMailTo(trans, MailReceiver(player, player->GetGUID().GetCounter()),
                 MailSender(MAIL_CREATURE, 34337));
@@ -166,7 +182,7 @@ namespace
 
         if (BonusLootConfig::Announce)
             ChatHandler(player->GetSession()).PSendSysMessage(
-                "Vous recevez une piece d'armure bonus adaptee a votre classe.");
+                "|cffff8000[Maître du jeu]|r Vous recevez une pièce d'armure bonus adaptée à votre classe.");
     }
 
     LootStore const* GetLootStore(ObjectGuid lootGuid, uint32& lootId, Player* player)
@@ -193,19 +209,26 @@ namespace
         return nullptr;
     }
 
-    uint32 SelectBonusItem(Player* player, LootStore const* lootStore, uint32 lootId)
+    uint32 SelectBonusItem(Player* player, LootStore const* lootStore, uint32 lootId, uint32 quality)
     {
         std::vector<LootStoreItem const*> possibleItems;
         lootStore->CollectPossibleItems(lootId, possibleItems);
 
-        std::vector<uint32> candidates;
+        std::vector<uint32> bindOnEquipCandidates;
+        std::vector<uint32> fallbackCandidates;
         for (LootStoreItem const* lootItem : possibleItems)
         {
             ItemTemplate const* proto = sObjectMgr->GetItemTemplate(lootItem->itemid);
-            if (proto && IsBonusQuality(proto->Quality) && IsUsefulArmor(proto, player))
-                candidates.push_back(proto->ItemId);
+            if (!proto || proto->Quality != quality || !IsUsefulArmor(proto, player))
+                continue;
+
+            fallbackCandidates.push_back(proto->ItemId);
+            if (proto->Bonding == BIND_WHEN_EQUIPPED)
+                bindOnEquipCandidates.push_back(proto->ItemId);
         }
 
+        std::vector<uint32> const& candidates = bindOnEquipCandidates.empty()
+            ? fallbackCandidates : bindOnEquipCandidates;
         if (candidates.empty())
             return 0;
 
@@ -232,9 +255,17 @@ class BonusLoot_PlayerScript : public PlayerScript
 public:
     BonusLoot_PlayerScript() : PlayerScript("BonusLoot_PlayerScript", { PLAYERHOOK_ON_LOOT_ITEM }) { }
 
-    void OnPlayerLootItem(Player* player, Item* /*item*/, uint32 /*count*/, ObjectGuid lootGuid) override
+    void OnPlayerLootItem(Player* player, Item* item, uint32 /*count*/, ObjectGuid lootGuid) override
     {
         if (!BonusLootConfig::Enable || !player || (BonusLootConfig::ExcludeBots && IsPlayerBot(player)))
+            return;
+
+        ItemTemplate const* triggerProto = item ? item->GetTemplate() : nullptr;
+        if (!triggerProto || !IsBonusQuality(triggerProto->Quality))
+            return;
+
+        std::vector<Player*> recipients = GetRecipients(player);
+        if (recipients.empty())
             return;
 
         uint32 lootId = 0;
@@ -242,9 +273,19 @@ public:
         if (!lootStore || !lootId)
             return;
 
-        for (Player* recipient : GetRecipients(player))
+        bool alreadyProcessed = false;
+        for (Player* recipient : recipients)
         {
-            uint32 itemId = SelectBonusItem(recipient, lootStore, lootId);
+            if (HasAlreadyReceivedBonus(recipient, lootGuid))
+                alreadyProcessed = true;
+        }
+
+        if (alreadyProcessed)
+            return;
+
+        for (Player* recipient : recipients)
+        {
+            uint32 itemId = SelectBonusItem(recipient, lootStore, lootId, triggerProto->Quality);
             if (itemId)
                 GiveBonus(recipient, itemId);
         }
