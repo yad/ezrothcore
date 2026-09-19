@@ -209,7 +209,8 @@ namespace
         return nullptr;
     }
 
-    uint32 SelectBonusItem(Player* player, LootStore const* lootStore, uint32 lootId, uint32 quality)
+    uint32 SelectBonusItem(Player* player, LootStore const* lootStore, uint32 lootId, uint32 quality,
+        uint32 requiredLevel)
     {
         std::vector<LootStoreItem const*> possibleItems;
         lootStore->CollectPossibleItems(lootId, possibleItems);
@@ -219,7 +220,8 @@ namespace
         for (LootStoreItem const* lootItem : possibleItems)
         {
             ItemTemplate const* proto = sObjectMgr->GetItemTemplate(lootItem->itemid);
-            if (!proto || proto->Quality != quality || !IsUsefulArmor(proto, player))
+            if (!proto || proto->Quality != quality || proto->RequiredLevel > requiredLevel
+                || !IsUsefulArmor(proto, player))
                 continue;
 
             fallbackCandidates.push_back(proto->ItemId);
@@ -285,7 +287,8 @@ public:
 
         for (Player* recipient : recipients)
         {
-            uint32 itemId = SelectBonusItem(recipient, lootStore, lootId, triggerProto->Quality);
+            uint32 itemId = SelectBonusItem(recipient, lootStore, lootId, triggerProto->Quality,
+                triggerProto->RequiredLevel);
             if (itemId)
                 GiveBonus(recipient, itemId);
         }
