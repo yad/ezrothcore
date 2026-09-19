@@ -403,7 +403,7 @@ namespace
 
         auto collectCandidates = [&](std::vector<LootItem>& items)
         {
-            for (uint8 index = 0; index < items.size(); ++index)
+            for (size_t index = 0; index < items.size(); ++index)
             {
                 LootItem& li = items[index];
                 if (li.is_looted || li.is_blocked || li.itemid == excludeItemId)
