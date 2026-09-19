@@ -589,6 +589,9 @@ public:
         if (!player || !lootStoreItem)
             return true;
 
+        if (loot.sourceGameObject)
+            return true;
+
         ItemTemplate const* proto = sObjectMgr->GetItemTemplate(lootStoreItem->itemid);
         if (!proto)
             return true;
@@ -598,6 +601,9 @@ public:
             return true;
 
         if (proto->Bonding != BIND_WHEN_PICKED_UP)
+            return true;
+
+        if (!loot.sourceWorldObjectGUID.IsCreatureOrVehicle())
             return true;
 
         Player* nonConstPlayer = const_cast<Player*>(player);
