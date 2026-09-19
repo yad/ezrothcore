@@ -49,3 +49,6 @@
 [submodule "modules/mod-instant-swing"]
 	path = modules/mod-instant-swing
 	url = https://github.com/Stefan2102/mod-instant-swing.git
+[submodule "modules/mod-zone-scaling"]
+	path = modules/mod-zone-scaling
+	url = https://github.com/firstoni-dev/mod-zone-scaling.git
