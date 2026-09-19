@@ -38,8 +38,10 @@ Au moment du loot (`PlayerScript::OnLootItem`) :
    - **fallback 1** : le module cherche dans le même butin (même créature/
      coffre) un autre objet encore disponible et utilisable par la classe, et
      le donne à la place ;
-   - **fallback 2** (si rien d'utile de même qualité n'est disponible dans ce
-     butin) : l'objet d'origine est rendu au joueur.
+   - **fallback 2** : si nécessaire, il cherche un objet compatible de même
+     qualité dans la table de loot possible du coffre et le donne à la place ;
+   - **fallback 3** (si aucun objet compatible n'existe) : l'objet d'origine
+     est rendu au joueur.
 
 Deux options dédiées au contexte boss pour ce mécanisme BoE :
 

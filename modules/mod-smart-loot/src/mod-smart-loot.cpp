@@ -8,7 +8,9 @@
  *    utilisable/préféré pour la classe du joueur, il est retiré, puis :
  *      a) tente de le remplacer par un autre objet du MÊME loot encore
  *         disponible qui EST utilisable ;
- *      b) sinon, rend l'objet d'origine.
+ *      b) sinon, cherche un objet compatible dans la table de loot possible
+ *         du coffre ;
+ *      c) sinon, rend l'objet d'origine.
  *
  * 2) "Smart loot" BoP (Bind on Pickup) sur les BOSS de donjon/raid
  *    uniquement : au moment de la génération de la table de butin
@@ -380,8 +382,8 @@ namespace
         return humans;
     }
 
-    // Cherche, dans le même butin, un autre objet (armure/arme) de même
-    // qualité, encore disponible et utilisable par la classe du joueur.
+    // Cherche d'abord dans le loot généré, puis dans la table possible, un
+    // autre objet (armure/arme) de même qualité utilisable par le joueur.
     bool TryGrantAlternateItem(Player* player, ObjectGuid const& lootguid, uint32 excludeItemId,
         uint32 requiredQuality)
     {
@@ -392,8 +394,6 @@ namespace
         struct LootCandidate
         {
             LootItem* item;
-            bool questItem;
-            uint8 lootIndex;
             bool fromTemplate;
         };
 
@@ -401,7 +401,7 @@ namespace
         std::vector<LootItem> templateItems;
         ObjectGuid sourceGuid = loot->sourceWorldObjectGUID ? loot->sourceWorldObjectGUID : lootguid;
 
-        auto collectCandidates = [&](std::vector<LootItem>& items, bool questItem)
+        auto collectCandidates = [&](std::vector<LootItem>& items)
         {
             for (uint8 index = 0; index < items.size(); ++index)
             {
@@ -425,12 +425,12 @@ namespace
                 if (!IsUsableByClass(altProto, player))
                     continue;
 
-                candidates.push_back({ &li, questItem, index, false });
+                candidates.push_back({ &li, false });
             }
         };
 
-        collectCandidates(loot->items, false);
-        collectCandidates(loot->quest_items, true);
+        collectCandidates(loot->items);
+        collectCandidates(loot->quest_items);
 
         LootStore const* lootStore = nullptr;
         uint32 lootId = 0;
@@ -478,7 +478,7 @@ namespace
                     continue;
                 }
 
-                candidates.push_back({ &candidate, false, 0, true });
+                candidates.push_back({ &candidate, true });
             }
         }
 
