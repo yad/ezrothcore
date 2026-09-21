@@ -129,24 +129,26 @@ namespace
             && (proto->Class == ITEM_CLASS_WEAPON || proto->Class == ITEM_CLASS_ARMOR);
     }
 
-    std::vector<Player*> GetRecipients(Player* player)
+    std::vector<Player*> GetRecipients(Player* looter)
     {
         std::vector<Player*> recipients;
-        Group* group = player->GetGroup();
+        Group* group = looter->GetGroup();
         if (!group)
         {
-            if (!BonusLootConfig::ExcludeBots || !IsPlayerBot(player))
-                recipients.push_back(player);
+            if (!BonusLootConfig::ExcludeBots || !IsPlayerBot(looter))
+                recipients.push_back(looter);
             return recipients;
         }
 
         for (GroupReference* itr = group->GetFirstMember(); itr; itr = itr->next())
         {
             Player* member = itr->GetSource();
-            if (member && member->IsInWorld() && (!BonusLootConfig::ExcludeBots || !IsPlayerBot(member)))
-                recipients.push_back(member);
+            if (!member || !member->IsInWorld() || member->GetMap() != looter->GetMap())
+                continue;
+            if (BonusLootConfig::ExcludeBots && IsPlayerBot(member))
+                continue;
+            recipients.push_back(member);
         }
-
         return recipients;
     }
 
@@ -225,6 +227,28 @@ namespace
 
         return candidates[urand(0, static_cast<uint32>(candidates.size() - 1))];
     }
+
+    void ProcessBonus(Player* looter, Item* item, ObjectGuid lootGuid)
+    {
+        if (!BonusLootConfig::Enable || !looter)
+            return;
+
+        ItemTemplate const* triggerProto = item ? item->GetTemplate() : nullptr;
+        if (!IsEquipmentItem(triggerProto) || !IsBonusQuality(triggerProto->Quality))
+            return;
+
+        uint32 lootId = 0;
+        LootStore const* lootStore = GetLootStore(lootGuid, lootId, looter);
+        if (!lootStore || !lootId)
+            return;
+
+        for (Player* recipient : GetRecipients(looter))
+        {
+            uint32 itemId = SelectBonusItem(recipient, lootStore, lootId, triggerProto->Quality);
+            if (itemId)
+                GiveBonus(recipient, itemId);
+        }
+    }
 }
 
 class BonusLoot_WorldScript : public WorldScript
@@ -244,32 +268,21 @@ public:
 class BonusLoot_PlayerScript : public PlayerScript
 {
 public:
-    BonusLoot_PlayerScript() : PlayerScript("BonusLoot_PlayerScript", { PLAYERHOOK_ON_LOOT_ITEM }) { }
+    BonusLoot_PlayerScript() : PlayerScript("BonusLoot_PlayerScript",
+        { PLAYERHOOK_ON_LOOT_ITEM, PLAYERHOOK_ON_GROUP_ROLL_REWARD_ITEM }) { }
 
+    // Solo, butin libre, maître du butin, coffres
     void OnPlayerLootItem(Player* player, Item* item, uint32 /*count*/, ObjectGuid lootGuid) override
     {
-        if (!BonusLootConfig::Enable || !player || (BonusLootConfig::ExcludeBots && IsPlayerBot(player)))
-            return;
+        ProcessBonus(player, item, lootGuid);
+    }
 
-        ItemTemplate const* triggerProto = item ? item->GetTemplate() : nullptr;
-        if (!IsEquipmentItem(triggerProto) || !IsBonusQuality(triggerProto->Quality))
-            return;
-
-        std::vector<Player*> recipients = GetRecipients(player);
-        if (recipients.empty())
-            return;
-
-        uint32 lootId = 0;
-        LootStore const* lootStore = GetLootStore(lootGuid, lootId, player);
-        if (!lootStore || !lootId)
-            return;
-
-        for (Player* recipient : recipients)
-        {
-            uint32 itemId = SelectBonusItem(recipient, lootStore, lootId, triggerProto->Quality);
-            if (itemId)
-                GiveBonus(recipient, itemId);
-        }
+    // Objet attribué à l'issue d'un jet en groupe
+    void OnPlayerGroupRollRewardItem(Player* player, Item* item, uint32 /*count*/,
+        RollVote /*voteType*/, Roll* roll) override
+    {
+        if (roll && roll->getLoot())
+            ProcessBonus(player, item, roll->getLoot()->sourceWorldObjectGUID);
     }
 };
 
