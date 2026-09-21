@@ -1,7 +1,6 @@
 #include "Chat.h"
 #include "Config.h"
 #include "Creature.h"
-#include "DataMap.h"
 #include "DatabaseEnv.h"
 #include "GameObject.h"
 #include "Group.h"
@@ -20,11 +19,6 @@
 
 namespace
 {
-    struct BonusLootPlayerState : public DataMap::Base
-    {
-        ObjectGuid lastLootSource;
-    };
-
     struct BonusLootConfig
     {
         static inline bool Enable = true;
@@ -133,16 +127,6 @@ namespace
     {
         return proto && proto->InventoryType != INVTYPE_NON_EQUIP
             && (proto->Class == ITEM_CLASS_WEAPON || proto->Class == ITEM_CLASS_ARMOR);
-    }
-
-    bool HasAlreadyReceivedBonus(Player* player, ObjectGuid lootGuid)
-    {
-        BonusLootPlayerState* state = player->CustomData.GetDefault<BonusLootPlayerState>("BonusLootPlayerState");
-        if (state->lastLootSource == lootGuid)
-            return true;
-
-        state->lastLootSource = lootGuid;
-        return false;
     }
 
     std::vector<Player*> GetRecipients(Player* player)
@@ -278,16 +262,6 @@ public:
         uint32 lootId = 0;
         LootStore const* lootStore = GetLootStore(lootGuid, lootId, player);
         if (!lootStore || !lootId)
-            return;
-
-        bool alreadyProcessed = false;
-        for (Player* recipient : recipients)
-        {
-            if (HasAlreadyReceivedBonus(recipient, lootGuid))
-                alreadyProcessed = true;
-        }
-
-        if (alreadyProcessed)
             return;
 
         for (Player* recipient : recipients)
