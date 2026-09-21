@@ -55,6 +55,9 @@
 [submodule "modules/mod-city-siege"]
 	path = modules/mod-city-siege
 	url = https://github.com/DustinHendrickson/mod-city-siege.git
-[submodule "moddules/mod-adaptive-autoattack"]
-	path = moddules/mod-adaptive-autoattack
+[submodule "modules/mod-adaptive-autoattack"]
+	path = modules/mod-adaptive-autoattack
 	url = https://github.com/CWO4PapaBear/Auto-Attack-Forever.git
+[submodule "modules/mod-dungeon-quests"]
+	path = modules/mod-dungeon-quests
+	url = https://github.com/Hisha/mod-dungeon-quests.git
