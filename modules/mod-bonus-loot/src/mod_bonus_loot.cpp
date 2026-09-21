@@ -16,6 +16,7 @@
 #include "SharedDefines.h"
 
 #include <vector>
+#include <string>
 
 namespace
 {
@@ -118,6 +119,22 @@ namespace
         }
     }
 
+    bool IsUsefulWeapon(ItemTemplate const* proto, Player* player)
+    {
+        if (!proto || proto->Class != ITEM_CLASS_WEAPON || proto->InventoryType == INVTYPE_NON_EQUIP)
+            return false;
+
+        if (proto->SubClass == ITEM_SUBCLASS_WEAPON_FISHING_POLE)
+            return false;
+
+        // Le joueur doit connaître la compétence de cette arme (épée, bâton, baguette...)
+        uint32 skill = proto->GetSkill();
+        if (!skill || !player->HasSkill(skill))
+            return false;
+
+        return player->CanUseItem(proto) == EQUIP_ERR_OK;
+    }
+
     bool IsBonusQuality(uint32 quality)
     {
         return quality == ITEM_QUALITY_UNCOMMON || quality == ITEM_QUALITY_RARE || quality == ITEM_QUALITY_EPIC;
@@ -160,21 +177,52 @@ namespace
 
         CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
         mailItem->SaveToDB(trans);
-        MailDraft("Butin bonus", "Votre inventaire était plein. Votre pièce d'armure bonus vous attend par courrier.")
+        MailDraft("Butin bonus", "Votre inventaire était plein. Votre pièce d'équipement bonus vous attend par courrier.")
             .AddItem(mailItem)
             .SendMailTo(trans, MailReceiver(player, player->GetGUID().GetCounter()),
                 MailSender(MAIL_CREATURE, 34337));
         CharacterDatabase.CommitTransaction(trans);
     }
 
+    bool AddItemSilently(Player* player, uint32 itemId)
+    {
+        ItemPosCountVec dest;
+        if (player->CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, itemId, 1) != EQUIP_ERR_OK)
+            return false;
+
+        return player->StoreNewItem(dest, itemId, true) != nullptr;
+    }
+
+    std::string BuildItemLink(Player* player, ItemTemplate const* proto)
+    {
+        int loc_idx = player->GetSession()->GetSessionDbLocaleIndex();
+        std::string name = proto->Name1;
+        if (ItemLocale const* il = sObjectMgr->GetItemLocale(proto->ItemId))
+            ObjectMgr::GetLocaleString(il->Name, loc_idx, name);
+
+        std::ostringstream oss;
+        oss << "|c" << std::hex << ItemQualityColors[proto->Quality] << std::dec
+            << "|Hitem:" << proto->ItemId << ":0:0:0:0:0:0:0:0:0|h[" << name << "]|h|r";
+        return oss.str();
+    }
+
     void GiveBonus(Player* player, uint32 itemId)
     {
-        if (!player->AddItem(itemId, 1))
+        ItemTemplate const* proto = sObjectMgr->GetItemTemplate(itemId);
+        if (!proto)
+            return;
+
+        bool mailed = false;
+        if (!AddItemSilently(player, itemId))
+        {
             SendBonusByMail(player, itemId);
+            mailed = true;
+        }
 
         if (BonusLootConfig::Announce)
             ChatHandler(player->GetSession()).PSendSysMessage(
-                "|cffff8000[Maître du jeu]|r Vous recevez une pièce d'armure bonus adaptée à votre classe.");
+                "|cffff8000[Maître du jeu]|r Pièce d'équipement bonus adaptée à votre classe : {}{}",
+                BuildItemLink(player, proto), mailed ? " (envoyée par courrier)" : "");
     }
 
     LootStore const* GetLootStore(ObjectGuid lootGuid, uint32& lootId, Player* player)
@@ -212,7 +260,7 @@ namespace
         {
             ItemTemplate const* proto = sObjectMgr->GetItemTemplate(lootItem->itemid);
             if (!proto || proto->Quality != quality || proto->RequiredLevel > player->GetLevel()
-                || !IsUsefulArmor(proto, player))
+                || !(IsUsefulArmor(proto, player) || IsUsefulWeapon(proto, player)))
                 continue;
 
             fallbackCandidates.push_back(proto->ItemId);
@@ -247,6 +295,9 @@ namespace
             uint32 itemId = SelectBonusItem(recipient, lootStore, lootId, triggerProto->Quality);
             if (itemId)
                 GiveBonus(recipient, itemId);
+            else if (BonusLootConfig::Announce)
+                ChatHandler(recipient->GetSession()).PSendSysMessage(
+                    "|cffff8000[Maître du jeu]|r Pas de butin bonus disponible pour vous cette fois-ci.");
         }
     }
 }
