@@ -129,6 +129,12 @@ namespace
         return quality == ITEM_QUALITY_UNCOMMON || quality == ITEM_QUALITY_RARE || quality == ITEM_QUALITY_EPIC;
     }
 
+    bool IsEquipmentItem(ItemTemplate const* proto)
+    {
+        return proto && proto->InventoryType != INVTYPE_NON_EQUIP
+            && (proto->Class == ITEM_CLASS_WEAPON || proto->Class == ITEM_CLASS_ARMOR);
+    }
+
     bool HasAlreadyReceivedBonus(Player* player, ObjectGuid lootGuid)
     {
         BonusLootPlayerState* state = player->CustomData.GetDefault<BonusLootPlayerState>("BonusLootPlayerState");
@@ -262,7 +268,7 @@ public:
             return;
 
         ItemTemplate const* triggerProto = item ? item->GetTemplate() : nullptr;
-        if (!triggerProto || !IsBonusQuality(triggerProto->Quality))
+        if (!IsEquipmentItem(triggerProto) || !IsBonusQuality(triggerProto->Quality))
             return;
 
         std::vector<Player*> recipients = GetRecipients(player);
