@@ -52,3 +52,6 @@
 [submodule "modules/mod-zone-scaling"]
 	path = modules/mod-zone-scaling
 	url = https://github.com/firstoni-dev/mod-zone-scaling.git
+[submodule "modules/mod-city-siege"]
+	path = modules/mod-city-siege
+	url = https://github.com/DustinHendrickson/mod-city-siege.git
