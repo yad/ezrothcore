@@ -100,15 +100,6 @@ void Map::InitVisibilityDistance()
     //init visibility for continents
     m_VisibleDistance = World::GetMaxVisibleDistanceOnContinents();
 
-    switch (GetId())
-    {
-        case MAP_EBON_HOLD: // Scarlet Enclave (DK starting zone)
-            m_VisibleDistance = 125.0f;
-            break;
-        case MAP_SCOTT_TEST: // (box map)
-            m_VisibleDistance = 200.0f;
-            break;
-    }
 }
 
 // Template specialization of utility methods
@@ -1975,32 +1966,6 @@ void InstanceMap::InitVisibilityDistance()
     //init visibility distance for instances
     m_VisibleDistance = World::GetMaxVisibleDistanceInInstances();
 
-    // pussywizard: this CAN NOT exceed MAX_VISIBILITY_DISTANCE
-    switch (GetId())
-    {
-        case 429: // Dire Maul
-        case 550: // The Eye
-        case 578: // The Nexus: The Oculus
-            m_VisibleDistance = 175.0f;
-            break;
-        case 649: // Trial of the Crusader
-        case 650: // Trial of the Champion
-        case 595: // Culling of Startholme
-        case 658: // Pit of Saron
-            m_VisibleDistance = 150.0f;
-            break;
-        case 615: // Obsidian Sanctum
-        case 616: // Eye of Eternity
-        case 603: // Ulduar
-        case 668: // Halls of Reflection
-        case 631: // Icecrown Citadel
-        case 724: // Ruby Sanctum
-            m_VisibleDistance = 200.0f;
-            break;
-        case 531: // Ahn'Qiraj Temple
-            m_VisibleDistance = 300.0f;
-            break;
-    }
 }
 
 /*
@@ -2379,8 +2344,6 @@ void BattlegroundMap::InitVisibilityDistance()
     //init visibility distance for BG/Arenas
     m_VisibleDistance = World::GetMaxVisibleDistanceInBGArenas();
 
-    if (IsBattleArena()) // pussywizard: start with 30yd visibility range on arenas to ensure players can't get informations about the opponents in any way
-        m_VisibleDistance = 30.0f;
 }
 
 Map::EnterState BattlegroundMap::CannotEnter(Player* player, bool loginCheck)

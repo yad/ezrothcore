@@ -225,12 +225,6 @@ void World::LoadConfigSettings(bool reload)
         LOG_ERROR("server.loading", "Visibility.Distance.Continents can't be less max aggro radius {}", 45 * getRate(RATE_CREATURE_AGGRO));
         _maxVisibleDistanceOnContinents = 45 * getRate(RATE_CREATURE_AGGRO);
     }
-    else if (_maxVisibleDistanceOnContinents > MAX_VISIBILITY_DISTANCE)
-    {
-        LOG_ERROR("server.loading", "Visibility.Distance.Continents can't be greater {}", MAX_VISIBILITY_DISTANCE);
-        _maxVisibleDistanceOnContinents = MAX_VISIBILITY_DISTANCE;
-    }
-
     //visibility in instances
     _maxVisibleDistanceInInstances = sConfigMgr->GetOption<float>("Visibility.Distance.Instances", DEFAULT_VISIBILITY_INSTANCE);
     if (_maxVisibleDistanceInInstances < 45 * getRate(RATE_CREATURE_AGGRO))
@@ -238,12 +232,6 @@ void World::LoadConfigSettings(bool reload)
         LOG_ERROR("server.loading", "Visibility.Distance.Instances can't be less max aggro radius {}", 45 * getRate(RATE_CREATURE_AGGRO));
         _maxVisibleDistanceInInstances = 45 * getRate(RATE_CREATURE_AGGRO);
     }
-    else if (_maxVisibleDistanceInInstances > MAX_VISIBILITY_DISTANCE)
-    {
-        LOG_ERROR("server.loading", "Visibility.Distance.Instances can't be greater {}", MAX_VISIBILITY_DISTANCE);
-        _maxVisibleDistanceInInstances = MAX_VISIBILITY_DISTANCE;
-    }
-
     //visibility in BG/Arenas
     _maxVisibleDistanceInBGArenas = sConfigMgr->GetOption<float>("Visibility.Distance.BGArenas", DEFAULT_VISIBILITY_BGARENAS);
     if (_maxVisibleDistanceInBGArenas < 45 * getRate(RATE_CREATURE_AGGRO))
@@ -251,12 +239,6 @@ void World::LoadConfigSettings(bool reload)
         LOG_ERROR("server.loading", "Visibility.Distance.BGArenas can't be less max aggro radius {}", 45 * getRate(RATE_CREATURE_AGGRO));
         _maxVisibleDistanceInBGArenas = 45 * getRate(RATE_CREATURE_AGGRO);
     }
-    else if (_maxVisibleDistanceInBGArenas > MAX_VISIBILITY_DISTANCE)
-    {
-        LOG_ERROR("server.loading", "Visibility.Distance.BGArenas can't be greater {}", MAX_VISIBILITY_DISTANCE);
-        _maxVisibleDistanceInBGArenas = MAX_VISIBILITY_DISTANCE;
-    }
-
     LOG_INFO("server.loading", "Will clear `logs` table of entries older than {} seconds every {} minutes.",
         getIntConfig(CONFIG_LOGDB_CLEARTIME), getIntConfig(CONFIG_LOGDB_CLEARINTERVAL));
 
