@@ -15,7 +15,7 @@ public:
             return;
         }
 
-        if (item->GetTemplate()->Quality == ITEM_QUALITY_POOR)
+        if (item->GetTemplate()->Quality == ITEM_QUALITY_POOR && item->GetTemplate()->SellPrice > 0)
         {
             SendTransactionInformation(player, item, count);
             player->ModifyMoney(item->GetTemplate()->SellPrice * count);
