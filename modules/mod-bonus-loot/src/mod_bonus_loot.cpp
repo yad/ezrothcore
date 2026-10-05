@@ -31,7 +31,7 @@ namespace
     bool IsPlayerBot(Player* player)
     {
 #ifdef MOD_PLAYERBOTS
-        return player && player->GetSession() && player->GetSession()->IsBot();
+        return player && player->GetSession() && player->GetSession()->IsHeadless();
 #else
         return false;
 #endif
