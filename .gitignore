@@ -32,6 +32,7 @@
 !/modules/mod-player-boost
 !/modules/mod-bonus-loot
 !/modules/mod-spell-autotarget
+!/modules/mod-loot-beam
 
 
 /*.override.yml

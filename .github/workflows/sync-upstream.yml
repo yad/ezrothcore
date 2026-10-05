@@ -42,6 +42,26 @@ jobs:
           git submodule sync --recursive
           git submodule update --init --recursive --remote
 
+      - name: Sync mod-loot-beam from upstream
+        run: |
+          set -e
+
+          TMP_DIR=$(mktemp -d)
+
+          echo "Cloning wxl-loot-beam..."
+          git clone --depth 1 https://github.com/manatactical/wxl-loot-beam.git "$TMP_DIR/wxl-loot-beam"
+
+          echo "Removing existing mod-loot-beam..."
+          rm -rf modules/mod-loot-beam
+
+          echo "Installing latest mod-loot-beam..."
+          mv "$TMP_DIR/wxl-loot-beam/server/mod-loot-beam" modules/mod-loot-beam
+
+          echo "Cleaning temporary directory..."
+          rm -rf "$TMP_DIR"
+
+          echo "mod-loot-beam synchronized."
+          
       - name: Commit and push
         run: |
           git add -A
