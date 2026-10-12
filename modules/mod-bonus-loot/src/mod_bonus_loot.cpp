@@ -184,15 +184,6 @@ namespace
         CharacterDatabase.CommitTransaction(trans);
     }
 
-    bool AddItemSilently(Player* player, uint32 itemId)
-    {
-        ItemPosCountVec dest;
-        if (player->CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, itemId, 1) != EQUIP_ERR_OK)
-            return false;
-
-        return player->StoreNewItem(dest, itemId, true) != nullptr;
-    }
-
     std::string BuildItemLink(Player* player, ItemTemplate const* proto)
     {
         int loc_idx = player->GetSession()->GetSessionDbLocaleIndex();
@@ -212,17 +203,12 @@ namespace
         if (!proto)
             return;
 
-        bool mailed = false;
-        if (!AddItemSilently(player, itemId))
-        {
-            SendBonusByMail(player, itemId);
-            mailed = true;
-        }
+        SendBonusByMail(player, itemId);
 
         if (BonusLootConfig::Announce)
             ChatHandler(player->GetSession()).PSendSysMessage(
                 "|cffff8000[Maître du jeu]|r Pièce d'équipement bonus adaptée à votre classe : {}{}",
-                BuildItemLink(player, proto), mailed ? " (envoyée par courrier)" : "");
+                BuildItemLink(player, proto), " (envoyée par courrier)");
     }
 
     LootStore const* GetLootStore(ObjectGuid lootGuid, uint32& lootId, Player* player)
