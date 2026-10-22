@@ -3243,7 +3243,7 @@ SpellMissInfo Spell::DoSpellHitOnUnit(Unit* unit, uint32 effectMask, bool scaleA
         bool refresh = false;
         bool refreshPeriodic = m_spellInfo->StackAmount < 2 && !HasTriggeredCastFlag(TRIGGERED_NO_PERIODIC_RESET);
         m_spellAura = Aura::TryRefreshStackOrCreate(aurSpellInfo, effectMask, unit, m_originalCaster,
-                      (aurSpellInfo == m_spellInfo) ? &m_spellValue->EffectBasePoints[0] : &basePoints[0], m_CastItem, caster->GetGUID(), &refresh, refreshPeriodic);
+            (aurSpellInfo == m_spellInfo) ? &m_spellValue->EffectBasePoints[0] : &basePoints[0], m_CastItem, caster->GetGUID(), &refresh, refreshPeriodic);
 
         // xinef: if aura was not refreshed, add proc ex
         if (!refresh)
@@ -3303,31 +3303,7 @@ SpellMissInfo Spell::DoSpellHitOnUnit(Unit* unit, uint32 effectMask, bool scaleA
 
                 if (m_spellValue->AuraDuration != 0)
                 {
-                    m_spellAura->Remove();
-                    if (m_diminishGroup == DIMINISHING_TAUNT)
-                        return SPELL_MISS_IMMUNE;
-                    bool found = false;
-                    for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
-                        if (effectMask & (1 << i) && m_spellInfo->Effects[i].Effect != SPELL_EFFECT_APPLY_AURA)
-                            found = true;
-                    if (!found)
-                        return SPELL_MISS_IMMUNE;
-                }
-                else
-                {
-                    ((UnitAura*)m_spellAura)->SetDiminishGroup(m_diminishGroup);
-
-                    bool positive = m_spellAura->GetSpellInfo()->IsPositive();
-                    if (AuraApplication* aurApp = m_spellAura->GetApplicationOfTarget(m_originalCaster->GetGUID()))
-                        positive = aurApp->IsPositive();
-
-                    duration = m_originalCaster->ModSpellDuration(aurSpellInfo, unit, duration, positive, effectMask);
-
-                    // xinef: haste affects duration of those spells twice
-                    if (duration > 0 && (m_originalCaster->HasAuraTypeWithAffectMask(SPELL_AURA_PERIODIC_HASTE, aurSpellInfo) || m_spellInfo->HasAttribute(SPELL_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC)))
-                        duration = int32(duration * m_originalCaster->GetFloatValue(UNIT_MOD_CAST_SPEED));
-
-                    if (m_spellValue->AuraDuration != 0)
+                    if (m_spellAura->GetMaxDuration() != -1)
                     {
                         m_spellAura->SetMaxDuration(m_spellValue->AuraDuration);
                     }
