@@ -26,6 +26,7 @@
 /src/server/scripts/Custom/*
 !/src/server/scripts/Custom/README.md
 
+!/modules/mod-dot-infinite
 !/modules/mod-flightmaster-whistle
 !/modules/mod-junk-to-gold
 !/modules/mod-level-bag-reward
@@ -33,7 +34,6 @@
 !/modules/mod-bonus-loot
 !/modules/mod-spell-autotarget
 !/modules/mod-loot-beam
-
 
 /*.override.yml
 /*.override.yaml

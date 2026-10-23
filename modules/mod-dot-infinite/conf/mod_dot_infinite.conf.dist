@@ -1,0 +1,39 @@
+[worldserver]
+
+########################################
+# mod-dot-infinite
+########################################
+
+#
+#    DotInfinite.Enable
+#        Description: Active le module (DoT permanents sur la cible).
+#        Default:     1
+#
+
+DotInfinite.Enable = 1
+
+#
+#    DotInfinite.AffectPlayers
+#        Description: Applique aussi l'effet quand la cible est un joueur (PvP).
+#                     Déconseillé : les DoT deviendraient permanents en PvP.
+#        Default:     0
+#
+
+DotInfinite.AffectPlayers = 0
+
+#
+#    DotInfinite.IncludePets
+#        Description: Inclut les DoT lancés par les pets / gardiens du joueur.
+#        Default:     0
+#
+
+DotInfinite.IncludePets = 0
+
+#
+#    DotInfinite.ExcludedSpells
+#        Description: Liste d'ID de sorts (séparés par des virgules) à ne pas rendre permanents.
+#                     Exemple : "172,980"
+#        Default:     ""
+#
+
+DotInfinite.ExcludedSpells = ""
