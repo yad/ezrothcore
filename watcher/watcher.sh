@@ -92,6 +92,8 @@ get_real_players()
                     ON a.id = c.account
                 WHERE GREATEST(a.online, c.online) = 1
                 AND a.username NOT LIKE 'RNDBOT%'
+                AND a.username NOT LIKE 'CITYLIFE%'
+                AND a.username NOT LIKE 'FISHLIFE%'
                 AND a.username <> 'AHBOT';
             " 2>/dev/null
     )
