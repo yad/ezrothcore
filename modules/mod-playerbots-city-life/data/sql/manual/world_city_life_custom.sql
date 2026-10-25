@@ -111,3 +111,61 @@ VALUES
 (10060,'conversation',6,0,2,0,'Ready for another adventure?',100,1),
 (10061,'conversation',6,1,2,0,'After I clear some space in these bags.',100,1),
 (10062,'conversation',6,2,2,0,'Same problem here. See you at the bank!',100,1);
+
+UPDATE `city_life_custom_chat`
+SET `text` = CASE `id`
+    WHEN 1001 THEN 'Un peu de po svp :('
+    WHEN 1002 THEN 'Une petite pièce d’or pour un aventurier débutant ?'
+    WHEN 1003 THEN '10 po en échange, et je vous offre une danse privée !'
+    WHEN 1004 THEN 'J’économise pour ma première monture. Chaque cuivre compte !'
+    WHEN 1005 THEN 'J’ai perdu ma chemise à l’hôtel des ventes. Littéralement.'
+    WHEN 1006 THEN 'Quelqu’un aurait un sac en trop ? Le mien est presque vide.'
+
+    WHEN 2001 THEN 'Achète équipement vert niveau 70-80, 10 po pièce !'
+    WHEN 2002 THEN 'J’achète les objets verts niveau 70-80 à 10 po. Regardez vos sacs !'
+    WHEN 2003 THEN 'Vous avez des objets verts de Norfendre en trop ? 10 po pièce !'
+    WHEN 2004 THEN 'Achète équipement vert niveau 70-80. 10 po par objet !'
+
+    WHEN 3001 THEN 'Toujours pas de tortue...'
+    WHEN 3002 THEN 'Encore un lancer.'
+    WHEN 3003 THEN 'Aujourd’hui, ce sont les poissons qui gagnent.'
+    WHEN 3004 THEN 'Y en a d’autres qui ne pêchent que des déchets ?'
+    WHEN 3005 THEN 'Un coin tranquille et une canne à pêche. Le bonheur.'
+
+    WHEN 10010 THEN 'Où se trouve le maître de monte ?'
+    WHEN 10011 THEN 'Demande à un garde, il pourra indiquer le maître sur ta carte.'
+    WHEN 10012 THEN 'Merci ! Mes pieds vont enfin pouvoir se reposer.'
+
+    WHEN 10020 THEN 'Tu as vu les prix à l’hôtel des ventes ?'
+    WHEN 10021 THEN 'J’ai regardé une fois. Mon portefeuille ne s’en est toujours pas remis.'
+    WHEN 10022 THEN 'Finalement, je vais peut-être farmer ça moi-même.'
+
+    WHEN 10030 THEN 'Alors, ça mord aujourd’hui ?'
+    WHEN 10031 THEN 'Surtout de la patience, avec un petit poisson en bonus.'
+    WHEN 10032 THEN 'Ça me paraît normal. Bonne pêche !'
+
+    WHEN 10040 THEN 'Elle est magnifique, ta monture !'
+    WHEN 10041 THEN 'Merci ! Ça m’a pris pas mal de temps pour l’obtenir.'
+    WHEN 10042 THEN 'Ça en valait la peine. Bonne route !'
+
+    WHEN 10050 THEN 'Tu connais un bon endroit pour réparer mon équipement ?'
+    WHEN 10051 THEN 'Un marchand d’équipement dans les environs devrait pouvoir t’aider.'
+    WHEN 10052 THEN 'Merci, mon armure a connu des jours meilleurs.'
+
+    WHEN 10060 THEN 'Prêt pour une nouvelle aventure ?'
+    WHEN 10061 THEN 'Dès que j’aurai fait un peu de place dans mes sacs.'
+    WHEN 10062 THEN 'Même problème ici. On se retrouve à la banque !'
+
+    ELSE `text`
+END
+WHERE `id` IN (
+    1001, 1002, 1003, 1004, 1005, 1006,
+    2001, 2002, 2003, 2004,
+    3001, 3002, 3003, 3004, 3005,
+    10010, 10011, 10012,
+    10020, 10021, 10022,
+    10030, 10031, 10032,
+    10040, 10041, 10042,
+    10050, 10051, 10052,
+    10060, 10061, 10062
+);

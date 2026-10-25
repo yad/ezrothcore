@@ -112,3 +112,50 @@ VALUES
 (1,3,1,1,'need help org',100),
 (1,3,1,1,'ally raid org go def',75),
 (1,3,1,1,'alliance at org gates',90);
+
+UPDATE `pvp_life_chat`
+SET `text` = CASE `text`
+    -- La Horde attaque Hurlevent : réaction de l’Alliance
+    WHEN 'Horde in Stormwind!' THEN 'La Horde est à Hurlevent !'
+    WHEN 'Horde at the gates!' THEN 'La Horde est aux portes !'
+    WHEN 'Defend Stormwind!' THEN 'Défendez Hurlevent !'
+    WHEN 'Horde in SW!' THEN 'La Horde est à HV !'
+    WHEN 'horde in sw' THEN 'horde à hv'
+    WHEN 'horde at sw gates' THEN 'horde aux portes de hv'
+    WHEN 'need help sw' THEN 'besoin d’aide à hv'
+    WHEN 'horde raid sw go def' THEN 'raid horde à hv, venez défendre'
+    WHEN 'horde in stormwind' THEN 'horde à hurlevent'
+
+    -- L’Alliance attaque Orgrimmar : réaction de la Horde
+    WHEN 'Alliance in Orgrimmar!' THEN 'L’Alliance est à Orgrimmar !'
+    WHEN 'Alliance at the gates!' THEN 'L’Alliance est aux portes !'
+    WHEN 'Defend Orgrimmar!' THEN 'Défendez Orgrimmar !'
+    WHEN 'Alliance in Org!' THEN 'L’Alliance est à Orgri !'
+    WHEN 'ally in org' THEN 'ally à orgri'
+    WHEN 'alliance in org' THEN 'alliance à orgri'
+    WHEN 'need help org' THEN 'besoin d’aide à orgri'
+    WHEN 'ally raid org go def' THEN 'raid ally à orgri, venez défendre'
+    WHEN 'alliance at org gates' THEN 'alliance aux portes d’orgri'
+
+    ELSE `text`
+END
+WHERE `text` IN (
+    'Horde in Stormwind!',
+    'Horde at the gates!',
+    'Defend Stormwind!',
+    'Horde in SW!',
+    'horde in sw',
+    'horde at sw gates',
+    'need help sw',
+    'horde raid sw go def',
+    'horde in stormwind',
+    'Alliance in Orgrimmar!',
+    'Alliance at the gates!',
+    'Defend Orgrimmar!',
+    'Alliance in Org!',
+    'ally in org',
+    'alliance in org',
+    'need help org',
+    'ally raid org go def',
+    'alliance at org gates'
+);
