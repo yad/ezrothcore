@@ -24,9 +24,12 @@ Hook `UnitScript::OnAuraApply` (appelé aussi à chaque rafraîchissement du DoT
 La durée devient `DotInfinite.Duration` secondes, sans jamais être plus courte que la durée naturelle du sort. Un rafraîchissement remet la durée à ce maximum.
 
 ### Propagation
-Chaque DoT posé est mémorisé pour son lanceur, avec sa date d'expiration. Quand une créature entre en combat (`UnitScript::OnUnitEnterCombat`) contre ce joueur ou un membre de son groupe, elle reçoit les DoT mémorisés encore valides, lancés par le même joueur (donc avec ses stats actuelles).
+La propagation fonctionne dans les deux sens, pour qu'aucun DoT ne soit oublié quel que soit l'ordre des événements :
 
-Conditions : la créature est hostile au lanceur, dans un rayon de `DotInfinite.Spread.Range` yards, sur la même carte. Les DoT propagés ne relancent pas la propagation en chaîne et ne prolongent pas la mémorisation.
+- **À chaque DoT posé ou rafraîchi** : le module l'applique aussitôt à tous les ennemis déjà engagés contre le joueur, son pet ou son groupe (liste de combat du core). Un mob qui a rejoint le combat entre ton 1er et ton 3e DoT reçoit donc bien les trois.
+- **À chaque nouvel ennemi** (`UnitScript::OnUnitEnterCombat`) : il reçoit les DoT mémorisés encore valides, avec leur date d'expiration, lancés par un joueur du groupe.
+
+Conditions : créature hostile au lanceur, sur la même carte, dans un rayon de `DotInfinite.Spread.Range` yards. Les DoT propagés sont lancés par le joueur (ses stats actuelles), ne relancent pas la propagation en chaîne et ne prolongent pas la mémorisation. Un ennemi qui possède déjà le DoT du même lanceur est ignoré (son timer n'est pas rafraîchi).
 
 La mémorisation est oubliée quand le joueur sort de combat ou se déconnecte.
 

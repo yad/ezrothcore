@@ -10,8 +10,10 @@
 #include "Config.h"
 #include "Creature.h"
 #include "Group.h"
+#include "GroupReference.h"
 #include "Map.h"
 #include "ObjectAccessor.h"
+#include "Pet.h"
 #include "Player.h"
 #include "ScriptMgr.h"
 #include "SpellAuras.h"
@@ -115,6 +117,76 @@ namespace
         std::lock_guard<std::mutex> lock(g_trackMutex);
         g_tracked.erase(casterGuid);
     }
+
+    // Ennemis (créatures) actuellement en combat contre le lanceur, son joueur
+    // propriétaire, son pet ou un membre de son groupe présent sur la même carte.
+    std::vector<Creature*> CollectEngagedEnemies(Unit* caster)
+    {
+        std::unordered_set<Unit*> allies;
+        allies.insert(caster);
+
+        Player* owner = caster->GetCharmerOrOwnerPlayerOrPlayerItself();
+        if (owner)
+        {
+            allies.insert(owner);
+            if (Unit* pet = owner->GetPet())
+                allies.insert(pet);
+
+            if (Group* group = owner->GetGroup())
+                for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+                    if (Player* member = ref->GetSource())
+                        if (member->IsInWorld() && member->GetMap() == caster->GetMap())
+                        {
+                            allies.insert(member);
+                            if (Unit* pet = member->GetPet())
+                                allies.insert(pet);
+                        }
+        }
+
+        std::unordered_set<Creature*> seen;
+        std::vector<Creature*> result;
+
+        for (Unit* ally : allies)
+        {
+            if (!ally->IsInWorld())
+                continue;
+
+            for (auto const& pair : ally->GetCombatManager().GetPvECombatRefs())
+            {
+                Creature* enemy = pair.second->GetOther(ally)->ToCreature();
+                if (!enemy || !enemy->IsAlive() || enemy->IsControlledByPlayer() || !seen.insert(enemy).second)
+                    continue;
+
+                if (!caster->IsHostileTo(enemy))
+                    continue;
+
+                if (g_spreadRange > 0.0f && !caster->IsWithinDist(enemy, g_spreadRange))
+                    continue;
+
+                result.push_back(enemy);
+            }
+        }
+
+        return result;
+    }
+
+    // Applique un DoT à tous les ennemis déjà engagés qui ne l'ont pas encore
+    void SpreadToEngagedEnemies(Unit* caster, uint32 spellId, Unit* except)
+    {
+        // Copie d'abord : AddAura peut modifier les listes de combat
+        std::vector<Creature*> const enemies = CollectEngagedEnemies(caster);
+
+        bool const previous = t_spreading;
+        t_spreading = true;
+        for (Creature* enemy : enemies)
+        {
+            if (enemy == except || !enemy->IsAlive() || enemy->HasAura(spellId, caster->GetGUID()))
+                continue;
+
+            caster->AddAura(spellId, enemy);
+        }
+        t_spreading = previous;
+    }
 }
 
 class DotInfinite_World : public WorldScript
@@ -173,7 +245,14 @@ public:
         aura->SetDuration(duration);
 
         if (g_spreadEnable && !t_spreading)
+        {
+            // 1) Mémorise le DoT pour les ennemis qui rejoindront le combat plus tard
             Track(caster->GetGUID(), info->Id, duration);
+
+            // 2) Applique-le tout de suite aux ennemis déjà engagés (ceux qui ont rejoint
+            //    le combat avant que ce DoT ne soit lancé)
+            SpreadToEngagedEnemies(caster, info->Id, target);
+        }
     }
 
     // Propage les DoT mémorisés aux ennemis qui rejoignent le combat
@@ -233,6 +312,7 @@ public:
         }
 
         // Application hors verrou : AddAura rappelle OnAuraApply
+        bool const previous = t_spreading;
         t_spreading = true;
         for (Pending const& p : pending)
         {
@@ -242,7 +322,7 @@ public:
 
             caster->AddAura(p.spellId, enemy);
         }
-        t_spreading = false;
+        t_spreading = previous;
     }
 };
 
