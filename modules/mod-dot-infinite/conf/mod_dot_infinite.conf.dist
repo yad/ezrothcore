@@ -6,16 +6,44 @@
 
 #
 #    DotInfinite.Enable
-#        Description: Active le module (DoT permanents sur la cible).
+#        Description: Active le module.
 #        Default:     1
 #
 
 DotInfinite.Enable = 1
 
 #
+#    DotInfinite.Duration
+#        Description: Durée (en secondes) des DoT lancés par le joueur.
+#                     0 = permanent (jusqu'au dispel, à la mort de la cible ou à un reset).
+#                     La durée n'est jamais plus courte que la durée naturelle du sort.
+#        Default:     120
+#
+
+DotInfinite.Duration = 120
+
+#
+#    DotInfinite.Spread.Enable
+#        Description: Propage les DoT posés aux ennemis qui entrent en combat
+#                     contre le joueur ou son groupe.
+#        Default:     1
+#
+
+DotInfinite.Spread.Enable = 1
+
+#
+#    DotInfinite.Spread.Range
+#        Description: Distance maximale (en yards) entre le lanceur et l'ennemi
+#                     pour que la propagation s'applique. 0 = pas de limite.
+#        Default:     60
+#
+
+DotInfinite.Spread.Range = 60
+
+#
 #    DotInfinite.AffectPlayers
 #        Description: Applique aussi l'effet quand la cible est un joueur (PvP).
-#                     Déconseillé : les DoT deviendraient permanents en PvP.
+#                     Déconseillé. La propagation ne concerne jamais les joueurs.
 #        Default:     0
 #
 
@@ -31,7 +59,7 @@ DotInfinite.IncludePets = 0
 
 #
 #    DotInfinite.ExcludedSpells
-#        Description: Liste d'ID de sorts (séparés par des virgules) à ne pas rendre permanents.
+#        Description: Liste d'ID de sorts (séparés par des virgules) exclus du module.
 #                     Exemple : "172,980"
 #        Default:     ""
 #
