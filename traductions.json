@@ -1,0 +1,592 @@
+{
+  "format": "wow-spell-dbc-translations-v1",
+  "locale": "frFR",
+  "locale_index": 2,
+  "source_locale": "enUS",
+  "source_dbc": "Spell.dbc",
+  "baseline_dbc": "Spell.dbc",
+  "instructions": "Remplir chaque champ translation en français. Ne pas modifier les IDs, les noms de champs ni les marqueurs WoW tels que $s1, $d, $t1 ou $20596s1.",
+  "spells": [
+    {
+      "id": 742,
+      "fields": {
+        "description": {
+          "source": "Melee critical strike chance increased by 2% for each Lacerate application consumed.",
+          "translation": ""
+        },
+        "aura_description": {
+          "source": "Melee critical strike chance increased by 2% for each Lacerate application consumed.",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 13953,
+      "fields": {
+        "description": {
+          "source": "An instant strike that deals ${0.4*$mw+1.8*$PL+0.429*$SPH} to ${0.4*$MW+1.8*$PL+0.429*$SPH} Holy damage.",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 20550,
+      "fields": {
+        "description": {
+          "source": "Base Health increased by $s1%. Chance to hit with all attacks and spells increased by $s2%.",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 20555,
+      "fields": {
+        "description": {
+          "source": "Health regeneration rate increased by $s1%.  $s2% of total Health regeneration may continue during combat. The duration of movement impairing effects is reduced by $58943s1%.",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 20557,
+      "fields": {
+        "description": {
+          "source": "Damage dealt versus Beasts increased by $s1%. Your chance to critically hit with Bows and Throwing Weapons is increased by $26290s1%.",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 20572,
+      "fields": {
+        "description": {
+          "source": "Increases attack power and spell power by 15%, or by $s1 attack power and $s3 spell power if that's more. Lasts $d.",
+          "translation": ""
+        },
+        "aura_description": {
+          "source": "Attack power and spell power increased.",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 20573,
+      "fields": {
+        "description": {
+          "source": "Duration of Stun effects reduced by an additional $s1%. Damage dealt by your pets increased by $20575s1%.",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 20574,
+      "fields": {
+        "description": {
+          "source": "Your chance to critically hit with melee and ranged attacks and spells is increased by 2% while you have an Axe or Fist Weapon equipped.",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 20577,
+      "fields": {
+        "description": {
+          "source": "When activated, regenerates $20578s1% of total health and mana every $20578t1 sec for $20578d.  Only works on Humanoid or Undead corpses within $a1 yds.  Any movement, action, or damage taken while Cannibalizing will cancel the effect.",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 20578,
+      "fields": {
+        "aura_description": {
+          "source": "Regenerate $s1% of total health and mana every $t1 seconds.",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 20582,
+      "fields": {
+        "description": {
+          "source": "Reduces the chance that melee and ranged attackers will hit you by $s1% and increases your movement speed by $s3%.",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 20585,
+      "fields": {
+        "description": {
+          "source": "Transform into a wisp upon death, increasing speed by $20584s1%. You are harder to detect while Shadowmelded or stealthed, and Nature spells are $20583s1% less likely to hit you.",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 20589,
+      "fields": {
+        "description": {
+          "source": "Escape the effects of any immobilization or movement speed reduction effect, and become immune to them for $90102d.",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 20591,
+      "fields": {
+        "description": {
+          "source": "Intellect increased by $s1%. Maximum mana, rage, energy and runic power increased by $s2%.",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 20593,
+      "fields": {
+        "description": {
+          "source": "Engineering skill increased by $s1. Arcane spells are $20592s1% less likely to hit you.",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 20594,
+      "fields": {
+        "description": {
+          "source": "Removes all poison, disease and bleed effects, increases your armor by $65116s1% and reduces physical damage taken by $65116s2% for $65116d.",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 20595,
+      "fields": {
+        "description": {
+          "source": "Your chance to critically hit with melee and ranged attacks and spells is increased by 2% while you have a Gun equipped.",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 20597,
+      "fields": {
+        "description": {
+          "source": "Your chance to critically hit with melee and ranged attacks and spells is increased by 2% while you have a Sword or Mace equipped.",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 20864,
+      "fields": {
+        "description": {
+          "source": "Your chance to critically hit with melee and ranged attacks and spells is increased by 2% while you have a Mace equipped.",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 24042,
+      "fields": {
+        "name": {
+          "source": "Pulverize",
+          "translation": ""
+        },
+        "description": {
+          "source": "Deals $s1% weapon damage plus ${$AP*4/100} additional damage for each of your Lacerate applications on the target, and increases your melee critical strike chance by 2% for each Lacerate application consumed for 10 sec.",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 33116,
+      "fields": {
+        "description": {
+          "source": "+$s1 Attack Power in Cat, Bear, and Dire Bear forms only.",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 33697,
+      "fields": {
+        "description": {
+          "source": "Increases attack power and spell power by 15%, or by $s1 attack power and $s2 spell power if that's more. Lasts $d.",
+          "translation": ""
+        },
+        "aura_description": {
+          "source": "Attack power and spell power increased.",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 33702,
+      "fields": {
+        "description": {
+          "source": "Increases attack power and spell power by 15%, or by $s1 attack power and $s2 spell power if that's more. Lasts $d.",
+          "translation": ""
+        },
+        "aura_description": {
+          "source": "Attack power and spell power increased.",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 57958,
+      "fields": {
+        "description": {
+          "source": "Reduces the mana cost of your Blessing of Might and Greater Blessing of Might spells by 50%.",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 57979,
+      "fields": {
+        "description": {
+          "source": "Reduces the mana cost of your Blessing of Wisdom and Greater Blessing of Wisdom spells by 50%.",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 58243,
+      "fields": {
+        "description": {
+          "source": "Reduces the mana cost of your Blessing of Might and Greater Blessing of Might spells by 50%.",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 58244,
+      "fields": {
+        "description": {
+          "source": "Reduces the mana cost of your Blessing of Wisdom and Greater Blessing of Wisdom spells by 50%.",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 59224,
+      "fields": {
+        "description": {
+          "source": "Your chance to critically hit with melee and ranged attacks and spells is increased by 2% while you have a Mace or Gun equipped.",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 65116,
+      "fields": {
+        "aura_description": {
+          "source": "Armor increased by $s1%. Physical damage taken reduced by $s2%.",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 90080,
+      "fields": {
+        "name": {
+          "source": "Seal of Fury",
+          "translation": ""
+        },
+        "description": {
+          "source": "Fills the Paladin with holy fury for $d, granting each melee attack ${$MWS*(0.022*$AP+0.044*$SPH)} additional Holy damage. While a shield is equipped, each of these hits also grants a Fury Ward that absorbs damage equal to 50% of the Holy damage dealt.  Only one Seal can be active on the Paladin at any one time.\n\nUnleashing this Seal's energy will cause ${1+0.2*$AP+0.32*$SPH} Holy damage to an enemy and taunt it to attack you for 4 sec.",
+          "translation": ""
+        },
+        "aura_description": {
+          "source": "Melee attacks cause an additional ${$MWS*(0.022*$AP+0.044*$SPH)} Holy damage and, with a shield equipped, grant a Fury Ward.",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 90081,
+      "fields": {
+        "name": {
+          "source": "Judgement of Fury",
+          "translation": ""
+        },
+        "description": {
+          "source": "Deals ${1+0.2*$AP+0.32*$SPH} Holy damage and taunts the target to attack you for 4 sec.",
+          "translation": ""
+        },
+        "aura_description": {
+          "source": "Taunted.",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 90082,
+      "fields": {
+        "name": {
+          "source": "Seal of Fury",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 90083,
+      "fields": {
+        "name": {
+          "source": "Fury Ward",
+          "translation": ""
+        },
+        "description": {
+          "source": "Absorbs damage. Only the strongest Fury Ward counts; a new one replaces a weaker one.",
+          "translation": ""
+        },
+        "aura_description": {
+          "source": "Absorbs damage.",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 90084,
+      "fields": {
+        "name": {
+          "source": "Glyph of Seal of Fury",
+          "translation": ""
+        },
+        "description": {
+          "source": "You gain 8% of your base mana each time you use a Judgement with Seal of Fury active.",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 90085,
+      "fields": {
+        "name": {
+          "source": "Glyph of Seal of Fury",
+          "translation": ""
+        },
+        "description": {
+          "source": "You gain 8% of your base mana each time you use a Judgement with Seal of Fury active.",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 90086,
+      "fields": {
+        "name": {
+          "source": "Glyph of Seal of Fury",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 90087,
+      "fields": {
+        "name": {
+          "source": "Glyph of Seal of Fury",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 90100,
+      "fields": {
+        "name": {
+          "source": "Big Game Hunter",
+          "translation": ""
+        },
+        "subtext": {
+          "source": "Racial Passive",
+          "translation": ""
+        },
+        "description": {
+          "source": "Damage dealt versus Beasts increased by $s1%. Frost spells are $20596s1% less likely to hit you.",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 90101,
+      "fields": {
+        "name": {
+          "source": "Elune's Light",
+          "translation": ""
+        },
+        "subtext": {
+          "source": "Racial",
+          "translation": ""
+        },
+        "description": {
+          "source": "Calls down Elune's light, increasing your chance to critically hit with melee and ranged attacks and spells by $s1% for $d.",
+          "translation": ""
+        },
+        "aura_description": {
+          "source": "Critical strike chance increased by $s1%.",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 90102,
+      "fields": {
+        "name": {
+          "source": "Escape Artist",
+          "translation": ""
+        },
+        "aura_description": {
+          "source": "Immune to immobilization and movement slowing effects.",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 90103,
+      "fields": {
+        "name": {
+          "source": "Eureka!",
+          "translation": ""
+        },
+        "subtext": {
+          "source": "Racial",
+          "translation": ""
+        },
+        "description": {
+          "source": "A flash of gnomish genius makes your next 3 spells or abilities within $d cost $s3% less and deal $s1% more damage or healing.",
+          "translation": ""
+        },
+        "aura_description": {
+          "source": "Spells and abilities cost $s3% less and deal $s1% more damage or healing.",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 90104,
+      "fields": {
+        "name": {
+          "source": "Expansive Mind",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 90105,
+      "fields": {
+        "name": {
+          "source": "Shatter Curse",
+          "translation": ""
+        },
+        "subtext": {
+          "source": "Racial",
+          "translation": ""
+        },
+        "description": {
+          "source": "Shatters all curses on you and makes you immune to Curses for $d. Magical damage taken is reduced by $s2% for the duration.",
+          "translation": ""
+        },
+        "aura_description": {
+          "source": "Immune to Curses. Magical damage taken reduced by $s2%.",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 90106,
+      "fields": {
+        "name": {
+          "source": "Touch of the Grave",
+          "translation": ""
+        },
+        "subtext": {
+          "source": "Racial Passive",
+          "translation": ""
+        },
+        "description": {
+          "source": "Your weapon attacks have a 5% chance and your harmful spells a 10% chance to drain the target, dealing Shadow damage equal to 25% of your attack power or spell power, whichever is higher, and healing you for the same amount. The drain can't exceed 5% of your maximum health. Shadow spells are $20579s1% less likely to hit you.",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 90107,
+      "fields": {
+        "name": {
+          "source": "Touch of the Grave",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 90108,
+      "fields": {
+        "name": {
+          "source": "Plainsrunning",
+          "translation": ""
+        },
+        "subtext": {
+          "source": "Racial Passive",
+          "translation": ""
+        },
+        "description": {
+          "source": "After 4 sec of moving, your movement speed increases by 2% every 4 sec you keep moving, up to 10%. Stopping resets it. Stacks with other speed bonuses and works in every druid form, Aquatic Form and the flight forms included, but not on a mount.\n\nNature spells are $20551s1% less likely to hit you.",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 90109,
+      "fields": {
+        "name": {
+          "source": "Plainsrunning",
+          "translation": ""
+        },
+        "aura_description": {
+          "source": "Movement speed increased by $s1% for every stack.",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 90110,
+      "fields": {
+        "name": {
+          "source": "Cultivation",
+          "translation": ""
+        },
+        "subtext": {
+          "source": "Racial",
+          "translation": ""
+        },
+        "description": {
+          "source": "Grows a herb out of the ground in front of you, matched to your level. Anyone can gather it without Herbalism. It withers after 2 min.\n\nPassive: Herbalism skill increased by $20552s1.",
+          "translation": ""
+        }
+      }
+    },
+    {
+      "id": 90111,
+      "fields": {
+        "name": {
+          "source": "Rapid Regeneration",
+          "translation": ""
+        },
+        "subtext": {
+          "source": "Racial",
+          "translation": ""
+        },
+        "description": {
+          "source": "Regenerates $s1% of your maximum health every $t1 sec for $d.",
+          "translation": ""
+        },
+        "aura_description": {
+          "source": "Regenerating $s1% of maximum health every $t1 sec.",
+          "translation": ""
+        }
+      }
+    }
+  ]
+}
