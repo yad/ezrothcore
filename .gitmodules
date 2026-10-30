@@ -76,3 +76,6 @@
 [submodule "modules/mod-forever-hunter"]
 	path = modules/mod-forever-hunter
 	url = https://github.com/buildthehomelab/wow-mod-forever-hunter.git
+[submodule "modules/mod-mount-scaling"]
+	path = modules/mod-mount-scaling
+	url = https://github.com/buildthehomelab/wow-mod-mount-scaling.git
