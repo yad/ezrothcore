@@ -58,3 +58,21 @@
 [submodule "modules/mod-forever-periodic-crit"]
 	path = modules/mod-forever-periodic-crit
 	url = https://github.com/buildthehomelab/wow-mod-forever-periodic-crit.git
+[submodule "modules/mod-forever-racials"]
+	path = modules/mod-forever-racials
+	url = https://github.com/buildthehomelab/wow-mod-forever-racials.git
+[submodule "modules/mod-forever-shaman"]
+	path = modules/mod-forever-shaman
+	url = https://github.com/buildthehomelab/wow-mod-forever-shaman.git
+[submodule "modules/mod-forever-druid"]
+	path = modules/mod-forever-druid
+	url = https://github.com/buildthehomelab/wow-mod-forever-druid.git
+[submodule "modules/mod-forever-rogue"]
+	path = modules/mod-forever-rogue
+	url = https://github.com/buildthehomelab/wow-mod-forever-rogue.git
+[submodule "modules/mod-forever-paladin"]
+	path = modules/mod-forever-paladin
+	url = https://github.com/buildthehomelab/wow-mod-forever-paladin.git
+[submodule "modules/mod-forever-hunter"]
+	path = modules/mod-forever-hunter
+	url = https://github.com/buildthehomelab/wow-mod-forever-hunter.git
