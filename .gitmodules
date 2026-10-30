@@ -55,3 +55,6 @@
 [submodule "modules/mod-playerbots-city-life"]
 	path = modules/mod-playerbots-city-life
 	url = https://github.com/vrzgames/mod-playerbots-city-life.git
+[submodule "modules/mod-forever-periodic-crit"]
+	path = modules/mod-forever-periodic-crit
+	url = https://github.com/buildthehomelab/wow-mod-forever-periodic-crit.git
