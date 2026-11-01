@@ -2,6 +2,18 @@
 
 ########################################
 # mod-dot-infinite
+#
+# Deux familles de DoT, deux comportements :
+#
+#  - DoT À DISTANCE (magie, malédictions, maladies, Moonfire, Serpent Sting...)
+#    Ils se propagent d'eux-mêmes à toute cible en combat contre le joueur ou son groupe.
+#
+#  - DoT de MÊLÉE (saignements de toutes les classes, poisons du voleur)
+#    Ils ne se propagent pas. À chaque coup, ils sont appliqués à tout le pack
+#    d'ennemis engagés qui est au corps à corps.
+#
+# La famille est déterminée automatiquement par le sort (pas par la classe) :
+# saignement ou poison du voleur => mêlée, tout le reste => à distance.
 ########################################
 
 #
@@ -14,7 +26,7 @@ DotInfinite.Enable = 1
 
 #
 #    DotInfinite.Duration
-#        Description: Durée (en secondes) des DoT lancés par le joueur.
+#        Description: Durée (en secondes) de tous les DoT lancés par le joueur.
 #                     0 = permanent (jusqu'au dispel, à la mort de la cible ou à un reset).
 #                     La durée n'est jamais plus courte que la durée naturelle du sort.
 #        Default:     120
@@ -22,28 +34,72 @@ DotInfinite.Enable = 1
 
 DotInfinite.Duration = 120
 
+########################################
+# DoT À DISTANCE : propagation automatique
+########################################
+
 #
-#    DotInfinite.Spread.Enable
-#        Description: Propage les DoT posés aux ennemis qui entrent en combat
-#                     contre le joueur ou son groupe.
+#    DotInfinite.Ranged.Enable
+#        Description: Propage les DoT à distance à toute créature en combat contre le joueur
+#                     ou son groupe : à la pose, à chaque tick, et à chaque ennemi qui
+#                     rejoint le combat.
 #        Default:     1
 #
 
-DotInfinite.Spread.Enable = 1
+DotInfinite.Ranged.Enable = 8
 
 #
-#    DotInfinite.Spread.Range
-#        Description: Distance maximale (en yards) entre le lanceur et l'ennemi
-#                     pour que la propagation s'applique. 0 = pas de limite.
+#    DotInfinite.Ranged.Range
+#        Description: Distance maximale (en yards) entre une créature qui porte le DoT
+#                     et une autre créature en combat pour la propagation.
+#                     0 = pas de limite.
 #        Default:     60
 #
 
-DotInfinite.Spread.Range = 60
+DotInfinite.Ranged.Range = 60
+
+########################################
+# DoT de MÊLÉE : application au pack à chaque coup
+########################################
+
+#
+#    DotInfinite.Melee.Enable
+#        Description: À chaque coup du joueur, applique ses DoT de mêlée à toutes les
+#                     créatures en combat qui sont au corps à corps (celles qui les ont déjà
+#                     voient leur durée remise au maximum).
+#        Default:     1
+#
+
+DotInfinite.Melee.Enable = 1
+
+#
+#    DotInfinite.Melee.Range
+#        Description: Distance (en yards) ajoutée à la portée de mêlée du joueur au moment
+#                     du coup pour considérer une créature "au corps à corps".
+#                     0 = portée de mêlée stricte.
+#        Default:     2
+#
+
+DotInfinite.Melee.Range = 2
+
+#
+#    DotInfinite.Melee.Interval
+#        Description: Délai minimum (en millisecondes) entre deux évaluations pour un même
+#                     joueur. Évite de recalculer à chaque cible d'un coup de zone.
+#                     0 = à chaque coup.
+#        Default:     250
+#
+
+DotInfinite.Melee.Interval = 250
+
+########################################
+# Options avancées
+########################################
 
 #
 #    DotInfinite.AffectPlayers
-#        Description: Applique aussi l'effet quand la cible est un joueur (PvP).
-#                     Déconseillé. La propagation ne concerne jamais les joueurs.
+#        Description: Applique aussi l'allongement de durée quand la cible est un joueur (PvP).
+#                     Déconseillé. Il n'y a jamais de propagation vers ou depuis des joueurs.
 #        Default:     0
 #
 
@@ -59,9 +115,9 @@ DotInfinite.IncludePets = 0
 
 #
 #    DotInfinite.ExcludedSpells
-#        Description: Liste d'ID de sorts (séparés par des virgules) exclus du module.
-#                     Exemple : "172,980"
-#        Default:     ""
+#        Description: (optionnel) Sorts exclus du module (ID séparés par des virgules).
+#                     Décommenter pour l'utiliser.
+#        Default:     aucun
 #
 
 DotInfinite.ExcludedSpells = ""

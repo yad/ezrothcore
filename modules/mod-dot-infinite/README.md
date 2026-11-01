@@ -1,9 +1,9 @@
 # mod-dot-infinite
 
-Module AzerothCore (WoW 3.3.5a) :
+Module AzerothCore (WoW 3.3.5a) qui change la durée et la propagation des DoT lancés par les joueurs.
 
-1. Les DoT lancés par un joueur ont une durée configurable (120 s par défaut). Avec `DotInfinite.Duration = 0`, ils sont permanents jusqu'à un dispel, la mort de la cible ou un reset/evade.
-2. Les DoT posés se propagent aux ennemis qui entrent en combat contre le joueur ou son groupe.
+- **Durée** : 120 s par défaut (`DotInfinite.Duration`), ou permanente avec `0` (jusqu'au dispel, à la mort de la cible ou à un reset).
+- **Propagation** : deux familles de DoT, deux comportements.
 
 ## Installation
 
@@ -11,44 +11,62 @@ Module AzerothCore (WoW 3.3.5a) :
 2. Relancer CMake puis recompiler le worldserver.
 3. Copier `conf/mod_dot_infinite.conf.dist` en `mod_dot_infinite.conf` dans `configs/modules/` et l'ajuster.
 
-## Fonctionnement
+## Les deux familles de DoT
 
-### Durée
-Hook `UnitScript::OnAuraApply` (appelé aussi à chaque rafraîchissement du DoT). Pour chaque aura appliquée, le module vérifie que :
+| | **DoT à distance** | **DoT de mêlée** |
+|---|---|---|
+| **Sorts** | tout sauf les deux types de droite : magie, malédictions, maladies, Moonfire, Insect Swarm, Serpent Sting... | saignements de toutes les classes (Rend, Rupture, Garrote, Deep Wounds, Rake, Rip, Lacerate...) et poisons du voleur (Deadly Poison) |
+| **Se propage seul ?** | **Oui**, à toute cible en combat contre le joueur ou son groupe | **Non** |
+| **Quand ?** | à la pose, à chaque tick, et quand un ennemi rejoint le combat | à chaque coup du joueur |
+| **Où ?** | créatures engagées à moins de `Ranged.Range` yards d'une créature qui porte le DoT (60) | créatures engagées au corps à corps du joueur (portée de mêlée + `Melee.Range` yards) |
+| **Si la cible l'a déjà** | ignorée (son timer n'est pas touché) | sa durée est remise au maximum |
 
-- le lanceur est un joueur (ou son pet / gardien si `DotInfinite.IncludePets = 1`) ;
-- l'aura est négative, non canalisée et comporte un effet de dégâts périodiques (`PERIODIC_DAMAGE`, `PERIODIC_DAMAGE_PERCENT`, `PERIODIC_LEECH`) ;
-- la cible n'est pas un joueur (sauf `DotInfinite.AffectPlayers = 1`) ;
-- le sort n'est pas dans `DotInfinite.ExcludedSpells`.
+La famille est déterminée par le sort lui-même, pas par la classe du lanceur : un druide a ses saignements en mêlée et Moonfire à distance. L'école de magie n'est pas utilisée (les saignements sont Physiques, mais les poisons sont Nature, comme Moonfire).
 
-La durée devient `DotInfinite.Duration` secondes, sans jamais être plus courte que la durée naturelle du sort. Un rafraîchissement remet la durée à ce maximum.
+### DoT à distance
+Dès qu'un de ces DoT est sur un ennemi, il se répand à tous les ennemis engagés contre le joueur, son pet ou son groupe :
 
-### Propagation
-La propagation fonctionne dans les deux sens, pour qu'aucun DoT ne soit oublié quel que soit l'ordre des événements :
+- à la pose ou au rafraîchissement du DoT ;
+- à **chaque tick** : toute créature engagée qui ne l'a pas encore le reçoit ;
+- à l'arrivée d'un **nouvel ennemi** dans le combat.
 
-- **À chaque DoT posé ou rafraîchi** : le module l'applique aussitôt à tous les ennemis déjà engagés contre le joueur, son pet ou son groupe (liste de combat du core). Un mob qui a rejoint le combat entre ton 1er et ton 3e DoT reçoit donc bien les trois.
-- **À chaque nouvel ennemi** (`UnitScript::OnUnitEnterCombat`) : il reçoit les DoT mémorisés encore valides, avec leur date d'expiration, lancés par un joueur du groupe.
+La portée est évaluée entre la créature qui porte déjà le DoT et chaque créature engagée visée. Elle ne dépend pas de la position du joueur ou de son pet.
 
-Conditions : créature hostile au lanceur, sur la même carte, dans un rayon de `DotInfinite.Spread.Range` yards. Les DoT propagés sont lancés par le joueur (ses stats actuelles), ne relancent pas la propagation en chaîne et ne prolongent pas la mémorisation. Un ennemi qui possède déjà le DoT du même lanceur est ignoré (son timer n'est pas rafraîchi).
+### DoT de mêlée
+Pas de propagation à la pose ni par tick. À chaque coup porté par le joueur (attaque normale réussie, ou capacité de mêlée qui touche), le module :
 
-La mémorisation est oubliée quand le joueur sort de combat ou se déconnecte.
+1. cherche les ennemis engagés contre le joueur, son pet ou son groupe ;
+2. lit les DoT de mêlée du joueur présents sur l'un d'eux ;
+3. les applique, avec le même nombre de charges, aux ennemis engagés dans la portée de mêlée du joueur à cet instant.
+
+Une créature à proximité qui n'est pas en combat n'est jamais ciblée (pas d'aggro involontaire). Une évaluation est faite au plus tous les `DotInfinite.Melee.Interval` ms par joueur.
+
+### Dans les deux cas
+Les DoT à propager sont toujours lus sur les auras réellement présentes sur les ennemis. Un DoT dispel, expiré ou dont la cible est morte n'est donc plus propagé. Les copies sont lancées par le joueur, avec ses stats actuelles.
+
+## Quels DoT sont pris en compte ?
+
+Un DoT est lancé par un joueur, négatif, non canalisé, et comporte un effet de dégâts périodiques (`PERIODIC_DAMAGE`, `PERIODIC_DAMAGE_PERCENT`, `PERIODIC_LEECH`). Sont exclus les sorts canalisés, les sorts à cible unique et les zones au sol (Consécration, Death and Decay, pièges...), dont la durée est celle de la zone et reste inchangée. Les cibles joueurs sont épargnées (sauf `DotInfinite.AffectPlayers = 1`).
 
 ## Options
 
 | Option | Défaut | Rôle |
 |---|---|---|
 | `DotInfinite.Enable` | 1 | Active le module |
-| `DotInfinite.Duration` | 120 | Durée en secondes (0 = permanent) |
-| `DotInfinite.Spread.Enable` | 1 | Propagation aux ennemis qui rejoignent le combat |
-| `DotInfinite.Spread.Range` | 60 | Distance max lanceur/ennemi (0 = illimitée) |
+| `DotInfinite.Duration` | 120 | Durée des DoT en secondes (0 = permanent) |
+| `DotInfinite.Ranged.Enable` | 1 | Propagation automatique des DoT à distance |
+| `DotInfinite.Ranged.Range` | 60 | Distance max entre créatures engagées pour propager un DoT (0 = illimitée) |
+| `DotInfinite.Melee.Enable` | 1 | Application des DoT de mêlée au pack à chaque coup |
+| `DotInfinite.Melee.Range` | 2 | Yards ajoutés à la portée de mêlée du joueur au moment du coup (0 = stricte) |
+| `DotInfinite.Melee.Interval` | 250 | Délai min. entre deux évaluations par joueur, en ms (0 = chaque coup) |
 | `DotInfinite.AffectPlayers` | 0 | Étend la durée aux cibles joueurs |
 | `DotInfinite.IncludePets` | 0 | Inclut les DoT des pets / gardiens |
-| `DotInfinite.ExcludedSpells` | vide | Liste d'ID de sorts exclus |
+| `DotInfinite.ExcludedSpells` | (commenté) | Liste d'ID de sorts exclus |
 
-## Remarques
+## Remarques techniques
 
-- Les sorts canalisés (Drain de vie, Fouet mental...) sont exclus.
-- L'aura peut s'afficher sans timer ou avec un long timer côté client.
+- Hooks utilisés (vérifiés sur la branche master d'AzerothCore) : `OnAuraApply`, `OnUnitEnterCombat`, `ModifyPeriodicDamageAurasTick`, `ModifyMeleeDamage`, `ModifySpellDamageTaken`, `OnDamage`, `OnPlayerLogout`, `OnAfterConfigLoad`.
+- Pour les attaques normales, `ModifyMeleeDamage` arme un coup et `OnDamage` le valide quand des dégâts sont réellement infligés : un coup raté, esquivé ou paré ne réapplique rien.
+- `OnUnitEnterCombat` n'est appelé que pour les créatures dotées d'une IA ; les ticks rattrapent les autres.
 - Si le lanceur se déconnecte, l'aura reste mais n'inflige plus de dégâts.
 - Un DoT actif maintient la cible en combat tant qu'il tourne.
-- Hooks utilisés (vérifiés sur la branche master d'AzerothCore) : `OnAuraApply`, `OnUnitEnterCombat`, `OnPlayerLeaveCombat`, `OnPlayerLogout`, `OnAfterConfigLoad`. `OnUnitEnterCombat` n'est appelé que pour les créatures dotées d'une IA.

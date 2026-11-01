@@ -1,18 +1,28 @@
 /*
  * mod-dot-infinite
  *
- * 1) Les DoT lancés par un joueur voient leur durée portée à une valeur
- *    configurable (120 s par défaut, 0 = permanent jusqu'au dispel / mort).
- * 2) Les DoT posés sont "mémorisés" : tout ennemi qui entre en combat contre le
- *    joueur (ou son groupe) reçoit les mêmes DoT.
+ * 1) Durée : les DoT lancés par un joueur durent DotInfinite.Duration secondes
+ *    (120 par défaut, 0 = permanent jusqu'au dispel / mort / reset).
+ *
+ * 2) Deux familles de DoT, deux comportements :
+ *    - À DISTANCE : tous les DoT lancés de loin (magie, malédictions, maladies,
+ *               Moonfire, Serpent Sting...). Ils se propagent d'eux-mêmes à
+ *               toute cible en combat contre le joueur ou son groupe : à la
+ *               pose, à chaque tick, et à chaque ennemi qui rejoint le combat.
+ *    - MÊLÉE  : saignements (toutes classes : guerrier, voleur, druide...) et
+ *               poisons du voleur. Aucune auto-propagation. À chaque coup porté
+ *               par le joueur, ses DoT de mêlée sont (ré)appliqués à tout le
+ *               pack d'ennemis engagés qui est au corps à corps.
+ *
+ * Aucune liste mémorisée : les DoT à propager sont toujours lus sur les auras
+ * réellement présentes sur les ennemis. Un DoT dispel ou une cible morte
+ * n'est donc plus propagé.
  */
 
 #include "Config.h"
 #include "Creature.h"
 #include "Group.h"
 #include "GroupReference.h"
-#include "Map.h"
-#include "ObjectAccessor.h"
 #include "Pet.h"
 #include "Player.h"
 #include "ScriptMgr.h"
@@ -33,27 +43,69 @@ namespace
 {
     using Clock = std::chrono::steady_clock;
 
-    // --- Configuration -------------------------------------------------------
-    bool     g_enable         = true;
-    bool     g_affectPlayers  = false;
-    bool     g_includePets    = false;
-    int32    g_durationMs     = 120 * IN_MILLISECONDS; // <= 0 => permanent (-1)
-    bool     g_spreadEnable   = true;
-    float    g_spreadRange    = 60.0f;                 // yards, autour du lanceur
-    std::unordered_set<uint32> g_excludedSpells;
-
-    // --- Suivi des DoT posés (pour la propagation) ----------------------------
-    struct TrackedDot
+    enum class DotMode : uint8
     {
-        Clock::time_point expires;
+        Ranged, // DoT lancé à distance : se propage de lui-même à toute cible en combat
+        Melee   // DoT de mêlée : appliqué au pack d'ennemis au corps à corps à chaque coup
     };
 
-    // GUID du lanceur -> (spellId -> expiration)
-    std::mutex g_trackMutex;
-    std::unordered_map<ObjectGuid, std::unordered_map<uint32, TrackedDot>> g_tracked;
+    // --- Configuration -------------------------------------------------------
+    bool   g_enable          = true;
+    bool   g_affectPlayers   = false;
+    bool   g_includePets     = false;
+    int32  g_durationMs      = 120 * IN_MILLISECONDS; // -1 => permanent
 
-    // Évite que les auras posées par la propagation relancent le suivi
+    bool   g_rangedEnable    = true;                  // DoT à distance
+    float  g_rangedRange     = 60.0f;                 // yards entre créatures en combat (0 = illimité)
+
+    bool   g_meleeEnable     = true;                  // DoT de mêlée
+    float  g_meleeRange      = 2.0f;                  // yards en plus de la portée de mêlée
+    uint32 g_meleeIntervalMs = 250;                   // intervalle min. entre deux évaluations
+    std::unordered_set<uint32> g_excludedSpells;
+
+    // --- État ----------------------------------------------------------------
+
+    // Empêche les auras posées par la propagation de se propager à leur tour
     thread_local bool t_spreading = false;
+
+    struct SpreadGuard
+    {
+        bool previous;
+        SpreadGuard() : previous(t_spreading) { t_spreading = true; }
+        ~SpreadGuard() { t_spreading = previous; }
+    };
+
+    // Un coup de mêlée (attaque normale) est "armé" au calcul des dégâts, puis
+    // validé quand les dégâts sont réellement infligés (un coup raté n'en inflige pas).
+    struct SwingMark
+    {
+        bool armed = false;
+        ObjectGuid attacker;
+        ObjectGuid victim;
+        Clock::time_point at;
+    };
+    thread_local SwingMark t_swing;
+
+    std::mutex g_meleeMutex;
+    std::unordered_map<ObjectGuid, Clock::time_point> g_lastMeleeEval;
+
+    // --- Configuration : chargement ---------------------------------------------
+    template <typename T>
+    void ParseIdList(std::string const& text, std::unordered_set<T>& out)
+    {
+        out.clear();
+        std::istringstream stream(text);
+        std::string token;
+        while (std::getline(stream, token, ','))
+        {
+            try
+            {
+                if (!token.empty())
+                    out.insert(static_cast<T>(std::stoul(token)));
+            }
+            catch (...) { }
+        }
+    }
 
     void LoadConfig()
     {
@@ -61,25 +113,28 @@ namespace
         g_affectPlayers = sConfigMgr->GetOption<bool>("DotInfinite.AffectPlayers", false);
         g_includePets   = sConfigMgr->GetOption<bool>("DotInfinite.IncludePets", false);
 
-        uint32 seconds  = sConfigMgr->GetOption<uint32>("DotInfinite.Duration", 120);
-        // 0 = permanent ; on borne pour ne pas dépasser int32 en millisecondes
-        g_durationMs    = seconds == 0 ? -1 : static_cast<int32>(std::min<uint32>(seconds, 2000000u) * IN_MILLISECONDS);
+        uint32 const seconds = sConfigMgr->GetOption<uint32>("DotInfinite.Duration", 120);
+        g_durationMs = seconds == 0 ? -1 : static_cast<int32>(std::min<uint32>(seconds, 2000000u) * IN_MILLISECONDS);
 
-        g_spreadEnable  = sConfigMgr->GetOption<bool>("DotInfinite.Spread.Enable", true);
-        g_spreadRange   = sConfigMgr->GetOption<float>("DotInfinite.Spread.Range", 60.0f);
+        g_rangedEnable = sConfigMgr->GetOption<bool>("DotInfinite.Ranged.Enable", true);
+        g_rangedRange  = sConfigMgr->GetOption<float>("DotInfinite.Ranged.Range", 60.0f);
 
-        g_excludedSpells.clear();
-        std::istringstream stream(sConfigMgr->GetOption<std::string>("DotInfinite.ExcludedSpells", ""));
-        std::string token;
-        while (std::getline(stream, token, ','))
-        {
-            try
-            {
-                if (!token.empty())
-                    g_excludedSpells.insert(static_cast<uint32>(std::stoul(token)));
-            }
-            catch (...) { }
-        }
+        g_meleeEnable     = sConfigMgr->GetOption<bool>("DotInfinite.Melee.Enable", true);
+        g_meleeRange      = sConfigMgr->GetOption<float>("DotInfinite.Melee.Range", 2.0f);
+        g_meleeIntervalMs = sConfigMgr->GetOption<uint32>("DotInfinite.Melee.Interval", 250);
+
+        ParseIdList(sConfigMgr->GetOption<std::string>("DotInfinite.ExcludedSpells", ""), g_excludedSpells);
+    }
+
+    // --- Classification --------------------------------------------------------
+
+    // Joueur propriétaire du DoT (le lanceur, ou le maître de son pet si activé)
+    Player* GetDotOwner(Unit* caster)
+    {
+        if (!caster)
+            return nullptr;
+
+        return g_includePets ? caster->GetCharmerOrOwnerPlayerOrPlayerItself() : caster->ToPlayer();
     }
 
     bool IsPeriodicDamageAura(SpellInfo const* info, Aura const* aura)
@@ -102,90 +157,201 @@ namespace
         return false;
     }
 
-    void Track(ObjectGuid casterGuid, uint32 spellId, int32 durationMs)
+    // DoT concerné par le module (indépendamment du mode)
+    bool IsEligibleDot(SpellInfo const* info, Aura const* aura)
     {
-        // Permanent : on garde l'entrée jusqu'à la fin du combat
-        auto expires = durationMs > 0 ? Clock::now() + std::chrono::milliseconds(durationMs)
-                                      : Clock::time_point::max();
+        if (!info || info->IsPositive() || info->IsChanneled() || info->IsSingleTarget())
+            return false;
 
-        std::lock_guard<std::mutex> lock(g_trackMutex);
-        g_tracked[casterGuid][spellId] = { expires };
+        // Zones au sol (Consécration, Death and Decay, pièges...) : l'aura appartient à un
+        // objet dynamique dont la durée de vie dépend de la sienne. On n'y touche pas.
+        if (aura->GetType() == DYNOBJ_AURA_TYPE || info->HasEffect(SPELL_EFFECT_PERSISTENT_AREA_AURA))
+            return false;
+
+        if (g_excludedSpells.count(info->Id))
+            return false;
+
+        return IsPeriodicDamageAura(info, aura);
     }
 
-    void Untrack(ObjectGuid casterGuid)
+    // Classification par le sort lui-même (indépendante de la classe du lanceur) :
+    //  - saignement (mécanique BLEED) : Rend, Rupture, Garrote, Deep Wounds, Rake, Rip, Lacerate...
+    //  - poison de la famille de sorts du voleur : Deadly Poison
+    // => MÊLÉE ; tout le reste (magie, malédictions, maladies, Moonfire...) => À DISTANCE
+    DotMode Classify(Player const* /*owner*/, SpellInfo const* info)
     {
-        std::lock_guard<std::mutex> lock(g_trackMutex);
-        g_tracked.erase(casterGuid);
+        bool const bleed = (info->GetAllEffectsMechanicMask() & (1ULL << MECHANIC_BLEED)) != 0;
+        bool const roguePoison = info->Dispel == DISPEL_POISON && info->SpellFamilyName == SPELLFAMILY_ROGUE;
+
+        return (bleed || roguePoison) ? DotMode::Melee : DotMode::Ranged;
     }
 
-    // Ennemis (créatures) actuellement en combat contre le lanceur, son joueur
-    // propriétaire, son pet ou un membre de son groupe présent sur la même carte.
-    std::vector<Creature*> CollectEngagedEnemies(Unit* caster)
-    {
-        std::unordered_set<Unit*> allies;
-        allies.insert(caster);
+    // --- Recherche des alliés et des ennemis engagés ----------------------------
 
-        Player* owner = caster->GetCharmerOrOwnerPlayerOrPlayerItself();
-        if (owner)
+    // Le joueur, son pet, et les membres de son groupe (et leurs pets) sur la même carte
+    std::vector<Unit*> CollectAllies(Player* owner)
+    {
+        std::vector<Unit*> allies;
+        std::unordered_set<Unit*> seen;
+
+        auto add = [&](Unit* unit)
         {
-            allies.insert(owner);
-            if (Unit* pet = owner->GetPet())
-                allies.insert(pet);
+            if (unit && unit->IsInWorld() && seen.insert(unit).second)
+                allies.push_back(unit);
+        };
 
-            if (Group* group = owner->GetGroup())
-                for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
-                    if (Player* member = ref->GetSource())
-                        if (member->IsInWorld() && member->GetMap() == caster->GetMap())
-                        {
-                            allies.insert(member);
-                            if (Unit* pet = member->GetPet())
-                                allies.insert(pet);
-                        }
-        }
+        add(owner);
+        add(owner->GetPet());
 
+        if (Group* group = owner->GetGroup())
+            for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+                if (Player* member = ref->GetSource())
+                    if (member->GetMap() == owner->GetMap())
+                    {
+                        add(member);
+                        add(member->GetPet());
+                    }
+
+        return allies;
+    }
+
+    // Créatures vivantes et hostiles actuellement en combat contre l'un des alliés
+    std::vector<Creature*> CollectEngagedEnemies(std::vector<Unit*> const& allies, Unit const* hostileTo)
+    {
+        std::vector<Creature*> enemies;
         std::unordered_set<Creature*> seen;
-        std::vector<Creature*> result;
 
         for (Unit* ally : allies)
-        {
-            if (!ally->IsInWorld())
-                continue;
-
             for (auto const& pair : ally->GetCombatManager().GetPvECombatRefs())
             {
                 Creature* enemy = pair.second->GetOther(ally)->ToCreature();
-                if (!enemy || !enemy->IsAlive() || enemy->IsControlledByPlayer() || !seen.insert(enemy).second)
+                if (!enemy || !enemy->IsAlive() || enemy->IsControlledByPlayer())
                     continue;
 
-                if (!caster->IsHostileTo(enemy))
+                if (!hostileTo->IsHostileTo(enemy) || !seen.insert(enemy).second)
                     continue;
 
-                if (g_spreadRange > 0.0f && !caster->IsWithinDist(enemy, g_spreadRange))
-                    continue;
-
-                result.push_back(enemy);
+                enemies.push_back(enemy);
             }
-        }
 
-        return result;
+        return enemies;
     }
 
-    // Applique un DoT à tous les ennemis déjà engagés qui ne l'ont pas encore
-    void SpreadToEngagedEnemies(Unit* caster, uint32 spellId, Unit* except)
+    bool InRangedRange(Unit const* source, Unit const* enemy)
     {
-        // Copie d'abord : AddAura peut modifier les listes de combat
-        std::vector<Creature*> const enemies = CollectEngagedEnemies(caster);
+        return g_rangedRange <= 0.0f || source->IsWithinDist(enemy, g_rangedRange);
+    }
 
-        bool const previous = t_spreading;
-        t_spreading = true;
+    // --- Lecture des DoT présents sur les ennemis ---------------------------------
+
+    using DotSources = std::unordered_map<uint32, uint8>; // spellId -> nombre de charges
+
+    // DoT du lanceur, du mode demandé, actuellement présents sur les ennemis
+    DotSources CollectSources(Unit* caster, Player* owner, std::vector<Creature*> const& enemies, DotMode mode)
+    {
+        DotSources sources;
+        ObjectGuid const casterGuid = caster->GetGUID();
+
+        for (Creature* enemy : enemies)
+            for (auto const& entry : enemy->GetAppliedAuras())
+            {
+                Aura* aura = entry.second->GetBase();
+                if (!aura || aura->GetCasterGUID() != casterGuid)
+                    continue;
+
+                SpellInfo const* info = aura->GetSpellInfo();
+                if (!IsEligibleDot(info, aura) || Classify(owner, info) != mode)
+                    continue;
+
+                uint8& stacks = sources[info->Id];
+                stacks = std::max<uint8>(stacks, aura->GetStackAmount());
+            }
+
+        return sources;
+    }
+
+    // --- Application ----------------------------------------------------------------
+
+    // Pose le DoT sur l'ennemi (avec les mêmes charges). S'il l'a déjà, ne le
+    // touche pas, sauf si refreshExisting : sa durée est alors remise au maximum.
+    void ApplyDot(Unit* caster, uint32 spellId, uint8 stacks, Unit* enemy, bool refreshExisting)
+    {
+        if (Aura* existing = enemy->GetAura(spellId, caster->GetGUID()))
+        {
+            if (refreshExisting && !existing->IsPermanent() && existing->GetDuration() < existing->GetMaxDuration())
+                existing->SetDuration(existing->GetMaxDuration());
+            return;
+        }
+
+        if (Aura* aura = caster->AddAura(spellId, enemy))
+            if (stacks > aura->GetStackAmount())
+                aura->SetStackAmount(stacks);
+    }
+
+    // DoT à distance : propage un DoT à tous les ennemis engagés qui ne l'ont pas
+    void SpreadAura(Unit* caster, Player* owner, Aura* aura, Unit const* source)
+    {
+        std::vector<Unit*> const allies = CollectAllies(owner);
+        std::vector<Creature*> const enemies = CollectEngagedEnemies(allies, owner);
+
+        uint32 const spellId = aura->GetId();
+        uint8 const stacks = aura->GetStackAmount();
+
+        SpreadGuard guard;
         for (Creature* enemy : enemies)
         {
-            if (enemy == except || !enemy->IsAlive() || enemy->HasAura(spellId, caster->GetGUID()))
+            if (enemy == source || !enemy->IsAlive() || !InRangedRange(source, enemy))
                 continue;
 
-            caster->AddAura(spellId, enemy);
+            ApplyDot(caster, spellId, stacks, enemy, false);
         }
-        t_spreading = previous;
+    }
+
+    bool PassMeleeThrottle(ObjectGuid guid)
+    {
+        if (g_meleeIntervalMs == 0)
+            return true;
+
+        Clock::time_point const now = Clock::now();
+
+        std::lock_guard<std::mutex> lock(g_meleeMutex);
+        Clock::time_point& last = g_lastMeleeEval[guid];
+        if (now - last < std::chrono::milliseconds(g_meleeIntervalMs))
+            return false;
+
+        last = now;
+        return true;
+    }
+
+    // DoT de mêlée : un coup du joueur (ré)applique ses DoT de mêlée à toutes
+    // les créatures engagées qui sont à portée de mêlée
+    void HandleMeleeHit(Player* player)
+    {
+        if (!g_enable || !g_meleeEnable || !player->IsAlive() || !player->IsInWorld())
+            return;
+
+        if (!PassMeleeThrottle(player->GetGUID()))
+            return;
+
+        std::vector<Unit*> const allies = CollectAllies(player);
+        std::vector<Creature*> const enemies = CollectEngagedEnemies(allies, player);
+        if (enemies.empty())
+            return;
+
+        // Les DoT sont lus sur tous les ennemis engagés, où qu'ils soient
+        DotSources const sources = CollectSources(player, player, enemies, DotMode::Melee);
+        if (sources.empty())
+            return;
+
+        SpreadGuard guard;
+        for (Creature* enemy : enemies)
+        {
+            if (!enemy->IsAlive() || !player->IsWithinMeleeRange(enemy, g_meleeRange))
+                continue;
+
+            for (auto const& [spellId, stacks] : sources)
+                ApplyDot(player, spellId, stacks, enemy, true);
+        }
     }
 }
 
@@ -204,9 +370,16 @@ class DotInfinite_Unit : public UnitScript
 {
 public:
     DotInfinite_Unit() : UnitScript("DotInfinite_Unit", true,
-        { UNITHOOK_ON_AURA_APPLY, UNITHOOK_ON_UNIT_ENTER_COMBAT }) { }
+        {
+            UNITHOOK_ON_AURA_APPLY,
+            UNITHOOK_ON_UNIT_ENTER_COMBAT,
+            UNITHOOK_MODIFY_PERIODIC_DAMAGE_AURAS_TICK,
+            UNITHOOK_MODIFY_MELEE_DAMAGE,
+            UNITHOOK_MODIFY_SPELL_DAMAGE_TAKEN,
+            UNITHOOK_ON_DAMAGE
+        }) { }
 
-    // Allonge la durée du DoT et le mémorise pour la propagation
+    // Durée du DoT, puis propagation immédiate pour la DoT à distance
     void OnAuraApply(Unit* target, Aura* aura) override
     {
         if (!g_enable || !target || !aura)
@@ -216,133 +389,167 @@ public:
         if (!caster || caster == target)
             return;
 
-        // Lanceur : le joueur (ou son pet / gardien si activé)
-        Player* player = g_includePets ? caster->GetCharmerOrOwnerPlayerOrPlayerItself()
-                                       : caster->ToPlayer();
-        if (!player)
+        Player* owner = GetDotOwner(caster);
+        if (!owner)
             return;
 
         // Par défaut, on épargne les cibles joueurs (équilibre PvP)
-        if (!g_affectPlayers && target->GetTypeId() == TYPEID_PLAYER)
+        if (!g_affectPlayers && target->IsPlayer())
             return;
 
         SpellInfo const* info = aura->GetSpellInfo();
-        if (!info || info->IsPositive() || info->IsChanneled() || aura->IsPermanent())
+        if (!IsEligibleDot(info, aura))
             return;
 
-        if (g_excludedSpells.count(info->Id))
-            return;
-
-        if (!IsPeriodicDamageAura(info, aura))
-            return;
-
-        // Jamais plus court que la durée naturelle du sort
-        int32 duration = g_durationMs;
-        if (duration > 0)
-            duration = std::max(duration, aura->GetMaxDuration());
-
-        aura->SetMaxDuration(duration);
-        aura->SetDuration(duration);
-
-        if (g_spreadEnable && !t_spreading)
+        // Durée : jamais plus courte que la durée naturelle du sort
+        int32 const natural = aura->GetMaxDuration();
+        if (natural != -1)
         {
-            // 1) Mémorise le DoT pour les ennemis qui rejoindront le combat plus tard
-            Track(caster->GetGUID(), info->Id, duration);
+            int32 duration = g_durationMs;
+            if (duration > 0)
+                duration = std::max(duration, natural);
 
-            // 2) Applique-le tout de suite aux ennemis déjà engagés (ceux qui ont rejoint
-            //    le combat avant que ce DoT ne soit lancé)
-            SpreadToEngagedEnemies(caster, info->Id, target);
+            aura->SetMaxDuration(duration);
+            aura->SetDuration(duration);
         }
+
+        // DoT à distance : propagation immédiate aux ennemis déjà engagés
+        if (g_rangedEnable && !t_spreading && target->IsCreature() && Classify(owner, info) == DotMode::Ranged)
+            SpreadAura(caster, owner, aura, target);
     }
 
-    // Propage les DoT mémorisés aux ennemis qui rejoignent le combat
+    // DoT à distance : à chaque tick, le DoT est propagé aux ennemis engagés qui ne l'ont pas
+    void ModifyPeriodicDamageAurasTick(Unit* target, Unit* attacker, uint32& /*damage*/, SpellInfo const* spellInfo) override
+    {
+        if (!g_enable || !g_rangedEnable || !target || !attacker || !spellInfo || spellInfo->IsPositive())
+            return;
+
+        if (!target->IsCreature() || !attacker->IsInWorld())
+            return;
+
+        Player* owner = GetDotOwner(attacker);
+        if (!owner || !owner->IsInWorld())
+            return;
+
+        Aura* aura = target->GetAura(spellInfo->Id, attacker->GetGUID());
+        if (!aura || !IsEligibleDot(spellInfo, aura) || Classify(owner, spellInfo) != DotMode::Ranged)
+            return;
+
+        SpreadAura(attacker, owner, aura, target);
+    }
+
+    // DoT à distance : un ennemi qui rejoint le combat reçoit les DoT déjà présents sur les autres
     void OnUnitEnterCombat(Unit* unit, Unit* victim) override
     {
-        if (!g_enable || !g_spreadEnable || !unit || !victim)
+        if (!g_enable || !g_rangedEnable || !unit || !victim)
             return;
 
         Creature* enemy = unit->ToCreature();
         if (!enemy || !enemy->IsAlive() || enemy->IsControlledByPlayer())
             return;
 
-        Player* victimPlayer = victim->GetCharmerOrOwnerPlayerOrPlayerItself();
-        if (!victimPlayer)
+        Player* owner = victim->GetCharmerOrOwnerPlayerOrPlayerItself();
+        if (!owner)
             return;
 
-        struct Pending { ObjectGuid caster; uint32 spellId; };
-        std::vector<Pending> pending;
+        std::vector<Unit*> const allies = CollectAllies(owner);
+        std::vector<Creature*> const engaged = CollectEngagedEnemies(allies, owner);
+        if (engaged.empty())
+            return;
 
+        // On lit d'abord tout, on modifie ensuite. La portée part de chaque créature
+        // qui porte déjà le DoT, pas du lanceur.
+        struct Job
         {
-            std::lock_guard<std::mutex> lock(g_trackMutex);
-            if (g_tracked.empty())
-                return;
+            Unit* caster;
+            Creature* source;
+            DotSources sources;
+        };
+        std::vector<Job> jobs;
 
-            Clock::time_point const now = Clock::now();
-
-            for (auto casterIt = g_tracked.begin(); casterIt != g_tracked.end(); )
+        for (Creature* source : engaged)
+            for (Unit* ally : allies)
             {
-                // Purge des DoT expirés
-                auto& spells = casterIt->second;
-                for (auto it = spells.begin(); it != spells.end(); )
-                    it = (it->second.expires <= now) ? spells.erase(it) : std::next(it);
-
-                if (spells.empty())
-                {
-                    casterIt = g_tracked.erase(casterIt);
+                Player* allyOwner = GetDotOwner(ally);
+                if (!allyOwner)
                     continue;
-                }
 
-                Unit* caster = ObjectAccessor::GetUnit(*enemy, casterIt->first);
-                if (caster && caster->IsInWorld() && caster->GetMap() == enemy->GetMap())
-                {
-                    Player* owner = caster->GetCharmerOrOwnerPlayerOrPlayerItself();
-                    bool const sameGroup = owner &&
-                        (owner == victimPlayer || owner->IsInSameGroupWith(victimPlayer));
-
-                    if (sameGroup && caster->IsAlive() && caster->IsHostileTo(enemy) &&
-                        (g_spreadRange <= 0.0f || caster->IsWithinDist(enemy, g_spreadRange)))
-                    {
-                        for (auto const& [spellId, dot] : spells)
-                            pending.push_back({ casterIt->first, spellId });
-                    }
-                }
-
-                ++casterIt;
+                DotSources sources = CollectSources(ally, allyOwner, { source }, DotMode::Ranged);
+                if (!sources.empty())
+                    jobs.push_back({ ally, source, std::move(sources) });
             }
-        }
 
-        // Application hors verrou : AddAura rappelle OnAuraApply
-        bool const previous = t_spreading;
-        t_spreading = true;
-        for (Pending const& p : pending)
+        SpreadGuard guard;
+        for (Job const& job : jobs)
         {
-            Unit* caster = ObjectAccessor::GetUnit(*enemy, p.caster);
-            if (!caster || !enemy->IsAlive() || enemy->HasAura(p.spellId, caster->GetGUID()))
+            if (!job.caster->IsAlive() || !job.source->IsAlive() ||
+                !job.caster->IsHostileTo(enemy) || !InRangedRange(job.source, enemy))
                 continue;
 
-            caster->AddAura(p.spellId, enemy);
+            for (auto const& [spellId, stacks] : job.sources)
+                ApplyDot(job.caster, spellId, stacks, enemy, false);
         }
-        t_spreading = previous;
+    }
+
+    // DoT de mêlée, attaque normale : armée au calcul des dégâts...
+    void ModifyMeleeDamage(Unit* target, Unit* attacker, uint32& /*damage*/) override
+    {
+        if (!g_enable || !g_meleeEnable || !target || !attacker || !attacker->IsPlayer())
+            return;
+
+        t_swing.armed = true;
+        t_swing.attacker = attacker->GetGUID();
+        t_swing.victim = target->GetGUID();
+        t_swing.at = Clock::now();
+    }
+
+    // ... et validée quand des dégâts sont réellement infligés (coup non raté)
+    void OnDamage(Unit* attacker, Unit* victim, uint32& /*damage*/) override
+    {
+        if (!t_swing.armed || !attacker || !victim)
+            return;
+
+        if (Clock::now() - t_swing.at > std::chrono::milliseconds(100))
+        {
+            t_swing.armed = false;
+            return;
+        }
+
+        if (attacker->GetGUID() != t_swing.attacker || victim->GetGUID() != t_swing.victim)
+            return;
+
+        t_swing.armed = false;
+
+        if (Player* player = attacker->ToPlayer())
+            HandleMeleeHit(player);
+    }
+
+    // DoT de mêlée, capacités de mêlée (Sinister Strike, Mutilation, Heroic Strike...)
+    void ModifySpellDamageTaken(Unit* /*target*/, Unit* attacker, int32& /*damage*/, SpellInfo const* spellInfo) override
+    {
+        if (!g_enable || !g_meleeEnable || !attacker || !spellInfo)
+            return;
+
+        if (spellInfo->DmgClass != SPELL_DAMAGE_CLASS_MELEE)
+            return;
+
+        if (Player* player = attacker->ToPlayer())
+            HandleMeleeHit(player);
     }
 };
 
 class DotInfinite_Player : public PlayerScript
 {
 public:
-    DotInfinite_Player() : PlayerScript("DotInfinite_Player",
-        { PLAYERHOOK_ON_PLAYER_LEAVE_COMBAT, PLAYERHOOK_ON_LOGOUT }) { }
-
-    // Fin de combat : on oublie les DoT à propager
-    void OnPlayerLeaveCombat(Player* player) override
-    {
-        if (player)
-            Untrack(player->GetGUID());
-    }
+    DotInfinite_Player() : PlayerScript("DotInfinite_Player", { PLAYERHOOK_ON_LOGOUT }) { }
 
     void OnPlayerLogout(Player* player) override
     {
-        if (player)
-            Untrack(player->GetGUID());
+        if (!player)
+            return;
+
+        std::lock_guard<std::mutex> lock(g_meleeMutex);
+        g_lastMeleeEval.erase(player->GetGUID());
     }
 };
 
