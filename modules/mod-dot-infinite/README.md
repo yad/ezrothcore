@@ -30,6 +30,8 @@ Dès qu'un de ces DoT est sur un ennemi, il se répand à tous les ennemis engag
 - à **chaque tick** : toute créature engagée qui ne l'a pas encore le reçoit ;
 - à l'arrivée d'un **nouvel ennemi** dans le combat.
 
+Les créatures de faction neutre sont également concernées dès qu'elles sont effectivement engagées en combat PvE avec un allié ; leur faction seule ne les exclut pas.
+
 La portée est évaluée entre la créature qui porte déjà le DoT et chaque créature engagée visée. Elle ne dépend pas de la position du joueur ou de son pet.
 
 ### DoT de mêlée

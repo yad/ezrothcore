@@ -215,8 +215,9 @@ namespace
         return allies;
     }
 
-    // Créatures vivantes et hostiles actuellement en combat contre l'un des alliés
-    std::vector<Creature*> CollectEngagedEnemies(std::vector<Unit*> const& allies, Unit const* hostileTo)
+    // Créatures vivantes actuellement engagées en combat PvE avec l'un des alliés.
+    // La référence de combat inclut aussi les créatures neutres devenues hostiles.
+    std::vector<Creature*> CollectEngagedEnemies(std::vector<Unit*> const& allies)
     {
         std::vector<Creature*> enemies;
         std::unordered_set<Creature*> seen;
@@ -228,7 +229,7 @@ namespace
                 if (!enemy || !enemy->IsAlive() || enemy->IsControlledByPlayer())
                     continue;
 
-                if (!hostileTo->IsHostileTo(enemy) || !seen.insert(enemy).second)
+                if (!seen.insert(enemy).second)
                     continue;
 
                 enemies.push_back(enemy);
@@ -292,7 +293,7 @@ namespace
     void SpreadAura(Unit* caster, Player* owner, Aura* aura, Unit const* source)
     {
         std::vector<Unit*> const allies = CollectAllies(owner);
-        std::vector<Creature*> const enemies = CollectEngagedEnemies(allies, owner);
+        std::vector<Creature*> const enemies = CollectEngagedEnemies(allies);
 
         uint32 const spellId = aura->GetId();
         uint8 const stacks = aura->GetStackAmount();
@@ -334,7 +335,7 @@ namespace
             return;
 
         std::vector<Unit*> const allies = CollectAllies(player);
-        std::vector<Creature*> const enemies = CollectEngagedEnemies(allies, player);
+        std::vector<Creature*> const enemies = CollectEngagedEnemies(allies);
         if (enemies.empty())
             return;
 
@@ -453,7 +454,7 @@ public:
             return;
 
         std::vector<Unit*> const allies = CollectAllies(owner);
-        std::vector<Creature*> const engaged = CollectEngagedEnemies(allies, owner);
+        std::vector<Creature*> const engaged = CollectEngagedEnemies(allies);
         if (engaged.empty())
             return;
 
@@ -482,8 +483,7 @@ public:
         SpreadGuard guard;
         for (Job const& job : jobs)
         {
-            if (!job.caster->IsAlive() || !job.source->IsAlive() ||
-                !job.caster->IsHostileTo(enemy) || !InRangedRange(job.source, enemy))
+            if (!job.caster->IsAlive() || !job.source->IsAlive() || !InRangedRange(job.source, enemy))
                 continue;
 
             for (auto const& [spellId, stacks] : job.sources)
