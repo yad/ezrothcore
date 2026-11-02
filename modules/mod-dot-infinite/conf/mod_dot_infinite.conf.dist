@@ -24,16 +24,6 @@
 
 DotInfinite.Enable = 1
 
-#
-#    DotInfinite.Duration
-#        Description: Durée (en secondes) de tous les DoT lancés par le joueur.
-#                     0 = permanent (jusqu'au dispel, à la mort de la cible ou à un reset).
-#                     La durée n'est jamais plus courte que la durée naturelle du sort.
-#        Default:     120
-#
-
-DotInfinite.Duration = 120
-
 ########################################
 # DoT À DISTANCE : propagation automatique
 ########################################
@@ -65,8 +55,8 @@ DotInfinite.Ranged.Range = 60
 #
 #    DotInfinite.Melee.Enable
 #        Description: À chaque coup du joueur, applique ses DoT de mêlée à toutes les
-#                     créatures en combat qui sont au corps à corps (celles qui les ont déjà
-#                     voient leur durée remise au maximum).
+#                     créatures en combat qui sont au corps à corps, sans modifier la durée
+#                     des auras déjà présentes.
 #        Default:     1
 #
 
@@ -95,15 +85,6 @@ DotInfinite.Melee.Interval = 250
 ########################################
 # Options avancées
 ########################################
-
-#
-#    DotInfinite.AffectPlayers
-#        Description: Applique aussi l'allongement de durée quand la cible est un joueur (PvP).
-#                     Déconseillé. Il n'y a jamais de propagation vers ou depuis des joueurs.
-#        Default:     0
-#
-
-DotInfinite.AffectPlayers = 0
 
 #
 #    DotInfinite.IncludePets

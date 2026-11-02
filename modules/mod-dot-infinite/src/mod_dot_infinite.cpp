@@ -1,10 +1,7 @@
 /*
  * mod-dot-infinite
  *
- * 1) Durée : les DoT lancés par un joueur durent DotInfinite.Duration secondes
- *    (120 par défaut, 0 = permanent jusqu'au dispel / mort / reset).
- *
- * 2) Deux familles de DoT, deux comportements :
+ * 1) Deux familles de DoT, deux comportements :
  *    - À DISTANCE : tous les DoT lancés de loin (magie, malédictions, maladies,
  *               Moonfire, Serpent Sting...). Ils se propagent d'eux-mêmes à
  *               toute cible en combat contre le joueur ou son groupe : à la
@@ -51,10 +48,7 @@ namespace
 
     // --- Configuration -------------------------------------------------------
     bool   g_enable          = true;
-    bool   g_affectPlayers   = false;
     bool   g_includePets     = false;
-    int32  g_durationMs      = 120 * IN_MILLISECONDS; // -1 => permanent
-
     bool   g_rangedEnable    = true;                  // DoT à distance
     float  g_rangedRange     = 60.0f;                 // yards entre créatures en combat (0 = illimité)
 
@@ -110,11 +104,7 @@ namespace
     void LoadConfig()
     {
         g_enable        = sConfigMgr->GetOption<bool>("DotInfinite.Enable", true);
-        g_affectPlayers = sConfigMgr->GetOption<bool>("DotInfinite.AffectPlayers", false);
         g_includePets   = sConfigMgr->GetOption<bool>("DotInfinite.IncludePets", false);
-
-        uint32 const seconds = sConfigMgr->GetOption<uint32>("DotInfinite.Duration", 120);
-        g_durationMs = seconds == 0 ? -1 : static_cast<int32>(std::min<uint32>(seconds, 2000000u) * IN_MILLISECONDS);
 
         g_rangedEnable = sConfigMgr->GetOption<bool>("DotInfinite.Ranged.Enable", true);
         g_rangedRange  = sConfigMgr->GetOption<float>("DotInfinite.Ranged.Range", 60.0f);
@@ -273,16 +263,12 @@ namespace
 
     // --- Application ----------------------------------------------------------------
 
-    // Pose le DoT sur l'ennemi (avec les mêmes charges). S'il l'a déjà, ne le
-    // touche pas, sauf si refreshExisting : sa durée est alors remise au maximum.
-    void ApplyDot(Unit* caster, uint32 spellId, uint8 stacks, Unit* enemy, bool refreshExisting)
+    // Pose le DoT sur l'ennemi avec le même nombre de charges, sans modifier
+    // la durée d'une aura déjà présente.
+    void ApplyDot(Unit* caster, uint32 spellId, uint8 stacks, Unit* enemy)
     {
-        if (Aura* existing = enemy->GetAura(spellId, caster->GetGUID()))
-        {
-            if (refreshExisting && !existing->IsPermanent() && existing->GetDuration() < existing->GetMaxDuration())
-                existing->SetDuration(existing->GetMaxDuration());
+        if (enemy->GetAura(spellId, caster->GetGUID()))
             return;
-        }
 
         if (Aura* aura = caster->AddAura(spellId, enemy))
             if (stacks > aura->GetStackAmount())
@@ -304,7 +290,7 @@ namespace
             if (enemy == source || !enemy->IsAlive() || !InRangedRange(source, enemy))
                 continue;
 
-            ApplyDot(caster, spellId, stacks, enemy, false);
+            ApplyDot(caster, spellId, stacks, enemy);
         }
     }
 
@@ -351,7 +337,7 @@ namespace
                 continue;
 
             for (auto const& [spellId, stacks] : sources)
-                ApplyDot(player, spellId, stacks, enemy, true);
+                ApplyDot(player, spellId, stacks, enemy);
         }
     }
 }
@@ -380,7 +366,7 @@ public:
             UNITHOOK_ON_DAMAGE
         }) { }
 
-    // Durée du DoT, puis propagation immédiate pour la DoT à distance
+    // Propagation immédiate pour les DoT à distance
     void OnAuraApply(Unit* target, Aura* aura) override
     {
         if (!g_enable || !target || !aura)
@@ -394,25 +380,9 @@ public:
         if (!owner)
             return;
 
-        // Par défaut, on épargne les cibles joueurs (équilibre PvP)
-        if (!g_affectPlayers && target->IsPlayer())
-            return;
-
         SpellInfo const* info = aura->GetSpellInfo();
         if (!IsEligibleDot(info, aura))
             return;
-
-        // Durée : jamais plus courte que la durée naturelle du sort
-        int32 const natural = aura->GetMaxDuration();
-        if (natural != -1)
-        {
-            int32 duration = g_durationMs;
-            if (duration > 0)
-                duration = std::max(duration, natural);
-
-            aura->SetMaxDuration(duration);
-            aura->SetDuration(duration);
-        }
 
         // DoT à distance : propagation immédiate aux ennemis déjà engagés
         if (g_rangedEnable && !t_spreading && target->IsCreature() && Classify(owner, info) == DotMode::Ranged)
@@ -487,7 +457,7 @@ public:
                 continue;
 
             for (auto const& [spellId, stacks] : job.sources)
-                ApplyDot(job.caster, spellId, stacks, enemy, false);
+                ApplyDot(job.caster, spellId, stacks, enemy);
         }
     }
 

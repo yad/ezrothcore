@@ -1,8 +1,7 @@
 # mod-dot-infinite
 
-Module AzerothCore (WoW 3.3.5a) qui change la durée et la propagation des DoT lancés par les joueurs.
+Module AzerothCore (WoW 3.3.5a) qui propage les DoT lancés par les joueurs.
 
-- **Durée** : 120 s par défaut (`DotInfinite.Duration`), ou permanente avec `0` (jusqu'au dispel, à la mort de la cible ou à un reset).
 - **Propagation** : deux familles de DoT, deux comportements.
 
 ## Installation
@@ -19,7 +18,7 @@ Module AzerothCore (WoW 3.3.5a) qui change la durée et la propagation des DoT l
 | **Se propage seul ?** | **Oui**, à toute cible en combat contre le joueur ou son groupe | **Non** |
 | **Quand ?** | à la pose, à chaque tick, et quand un ennemi rejoint le combat | à chaque coup du joueur |
 | **Où ?** | créatures engagées à moins de `Ranged.Range` yards d'une créature qui porte le DoT (60) | créatures engagées au corps à corps du joueur (portée de mêlée + `Melee.Range` yards) |
-| **Si la cible l'a déjà** | ignorée (son timer n'est pas touché) | sa durée est remise au maximum |
+| **Si la cible l'a déjà** | ignorée (son timer n'est pas touché) | ignorée (son timer n'est pas touché) |
 
 La famille est déterminée par le sort lui-même, pas par la classe du lanceur : un druide a ses saignements en mêlée et Moonfire à distance. L'école de magie n'est pas utilisée (les saignements sont Physiques, mais les poisons sont Nature, comme Moonfire).
 
@@ -44,24 +43,22 @@ Pas de propagation à la pose ni par tick. À chaque coup porté par le joueur (
 Une créature à proximité qui n'est pas en combat n'est jamais ciblée (pas d'aggro involontaire). Une évaluation est faite au plus tous les `DotInfinite.Melee.Interval` ms par joueur.
 
 ### Dans les deux cas
-Les DoT à propager sont toujours lus sur les auras réellement présentes sur les ennemis. Un DoT dispel, expiré ou dont la cible est morte n'est donc plus propagé. Les copies sont lancées par le joueur, avec ses stats actuelles.
+Les DoT à propager sont toujours lus sur les auras réellement présentes sur les ennemis. Un DoT dispel, expiré ou dont la cible est morte n'est donc plus propagé. Les copies sont lancées par le joueur, avec ses stats actuelles. La durée naturelle des sorts n'est pas modifiée ; une aura déjà présente n'est ni rafraîchie ni prolongée par la propagation.
 
 ## Quels DoT sont pris en compte ?
 
-Un DoT est lancé par un joueur, négatif, non canalisé, et comporte un effet de dégâts périodiques (`PERIODIC_DAMAGE`, `PERIODIC_DAMAGE_PERCENT`, `PERIODIC_LEECH`). Sont exclus les sorts canalisés, les sorts à cible unique et les zones au sol (Consécration, Death and Decay, pièges...), dont la durée est celle de la zone et reste inchangée. Les cibles joueurs sont épargnées (sauf `DotInfinite.AffectPlayers = 1`).
+Un DoT est lancé par un joueur, négatif, non canalisé, et comporte un effet de dégâts périodiques (`PERIODIC_DAMAGE`, `PERIODIC_DAMAGE_PERCENT`, `PERIODIC_LEECH`). Sont exclus les sorts canalisés, les sorts à cible unique et les zones au sol (Consécration, Death and Decay, pièges...), dont la durée est celle de la zone et reste inchangée. Les DoT sur les joueurs gardent également leur durée naturelle et ne sont pas propagés.
 
 ## Options
 
 | Option | Défaut | Rôle |
 |---|---|---|
 | `DotInfinite.Enable` | 1 | Active le module |
-| `DotInfinite.Duration` | 120 | Durée des DoT en secondes (0 = permanent) |
 | `DotInfinite.Ranged.Enable` | 1 | Propagation automatique des DoT à distance |
 | `DotInfinite.Ranged.Range` | 60 | Distance max entre créatures engagées pour propager un DoT (0 = illimitée) |
 | `DotInfinite.Melee.Enable` | 1 | Application des DoT de mêlée au pack à chaque coup |
 | `DotInfinite.Melee.Range` | 2 | Yards ajoutés à la portée de mêlée du joueur au moment du coup (0 = stricte) |
 | `DotInfinite.Melee.Interval` | 250 | Délai min. entre deux évaluations par joueur, en ms (0 = chaque coup) |
-| `DotInfinite.AffectPlayers` | 0 | Étend la durée aux cibles joueurs |
 | `DotInfinite.IncludePets` | 0 | Inclut les DoT des pets / gardiens |
 | `DotInfinite.ExcludedSpells` | (commenté) | Liste d'ID de sorts exclus |
 
