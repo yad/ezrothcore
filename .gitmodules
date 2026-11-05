@@ -79,3 +79,6 @@
 [submodule "modules/mod-mount-scaling"]
 	path = modules/mod-mount-scaling
 	url = https://github.com/buildthehomelab/wow-mod-mount-scaling.git
+[submodule "modules/mod-questie-bridge"]
+	path = modules/mod-questie-bridge
+	url = https://github.com/Aldori15/mod-questie-bridge.git
