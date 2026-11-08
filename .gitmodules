@@ -34,9 +34,6 @@
 [submodule "modules/mod-auto-resurrect"]
 	path = modules/mod-auto-resurrect
 	url = https://github.com/Elmegaard/mod-auto-resurrect.git
-[submodule "modules/mod-transmog-plus"]
-	path = modules/mod-transmog-plus
-	url = https://github.com/yad/mod-transmog-plus.git
 [submodule "modules/mod-dual-tracking"]
 	path = modules/mod-dual-tracking
 	url = https://github.com/b-wun/mod-dual-tracking.git
@@ -82,3 +79,6 @@
 [submodule "modules/mod-weather"]
 	path = modules/mod-weather
 	url = https://github.com/buildthehomelab/wow-mod-weather.git
+[submodule "modules/mod-transmog-plus"]
+	path = modules/mod-transmog-plus
+	url = https://github.com/buildthehomelab/wow-mod-transmog-plus
