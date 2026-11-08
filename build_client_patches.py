@@ -34,10 +34,14 @@ Exemples
     python build_btl_patches.py --list
     python build_btl_patches.py
     python build_btl_patches.py --out patch-V.MPQ --install
+    python build_btl_patches.py --out patch-Z.MPQ --install \\
+        --overcast-sql modules/mod-weather/data/sql/db-world/mod_weather_overcast.sql
     python build_btl_patches.py --repo-path forever-racials=D:\\repo\\azerothcore\\modules\\mod-forever-racials
 
 Pour ajouter un autre patch de buildthehomelab : ajouter un objet Patch(...)
 dans la liste PATCHES plus bas, dans l'ordre d'exécution voulu.
+--overcast-sql ajoute les tables d'éclairage générées par mod-weather au MPQ et écrit le SQL
+correspondant pour le serveur.
 """
 from __future__ import annotations
 
@@ -589,6 +593,38 @@ class Builder:
         self.pack(self.out)
         self.check_order()
 
+    def add_overcast(self, sql_path: Path) -> None:
+        module = (self.modules_dir or Path(__file__).resolve().parent / "modules") / "mod-weather"
+        script = module / "tools" / "build_overcast.py"
+        if not script.is_file():
+            raise StormError(f"Builder Overcast introuvable : {script}")
+
+        overlay = self.work / "overcast.MPQ"
+        env = os.environ.copy()
+        env["STORMLIB"] = str(self.sl.path)
+        env["PYTHONUTF8"] = "1"
+        cmd = [
+            sys.executable, str(script),
+            "--client", str(self.client),
+            "--locale", self.locale,
+            "--patch", str(self.out),
+            "--out", str(overlay),
+            "--sql", str(sql_path.resolve()),
+        ]
+        log("\n=== Ajout des ciels overcast ===")
+        log("  $ " + " ".join(f'"{c}"' if " " in c else c for c in cmd))
+        try:
+            subprocess.run(cmd, cwd=module, env=env, check=True)
+            if not overlay.is_file():
+                raise StormError(f"Le script Overcast n'a pas produit {overlay}")
+            self.stage_mpq(overlay, "mod-weather · overcast")
+            log(f"\n=== Fusion de l'overcast dans {self.out} ===")
+            self.pack(self.out)
+            self.check_order()
+        finally:
+            if overlay.exists():
+                overlay.unlink()
+
     def extract_embedded_python(self, sh: Path, name: str) -> Path:
         """Les .sh de l'auteur sont un wrapper bash autour d'un python en heredoc : on exécute le python."""
         text = sh.read_bytes().decode("utf-8").replace("\r\n", "\n")
@@ -668,6 +704,8 @@ def main() -> int:
     ap.add_argument("--only", action="append", default=[], metavar="NOM", help="ne traiter que ce patch (répétable)")
     ap.add_argument("--update", action="store_true", help="git pull des dépôts déjà clonés")
     ap.add_argument("--stormlib", help="chemin de StormLib.dll / libstorm")
+    ap.add_argument("--overcast-sql", type=Path,
+                    help="générer mod-weather overcast et son SQL à ce chemin, puis fusionner les tables dans le MPQ")
     ap.add_argument("--install", action="store_true", help="copier le MPQ final dans <client>\\Data (ou Data\\<locale> avec --in-locale)")
     ap.add_argument("--in-locale", action="store_true",
                     help="le patch est destiné à Data\\<locale>\\ (nom attendu : patch-<locale>-<lettre>.mpq) ; "
@@ -724,6 +762,8 @@ def main() -> int:
                           Path(args.modules_dir).resolve() if args.modules_dir else None)
         try:
             builder.run(patches)
+            if args.overcast_sql:
+                builder.add_overcast(args.overcast_sql)
         finally:
             builder.close_all()
     except (StormError, subprocess.CalledProcessError) as exc:
