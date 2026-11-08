@@ -82,3 +82,6 @@
 [submodule "modules/mod-transmog-plus"]
 	path = modules/mod-transmog-plus
 	url = https://github.com/buildthehomelab/wow-mod-transmog-plus
+[submodule "modules/mod-missing-objectives"]
+	path = modules/mod-missing-objectives
+	url = https://github.com/Trimitor/mod-missing-objectives
