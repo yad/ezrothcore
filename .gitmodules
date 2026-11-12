@@ -85,3 +85,9 @@
 [submodule "modules/mod-missing-objectives"]
 	path = modules/mod-missing-objectives
 	url = https://github.com/Trimitor/mod-missing-objectives
+[submodule "modules/mod-global-scaling"]
+	path = modules/mod-global-scaling
+	url = https://github.com/mama128/mod-global-scaling.git
+[submodule "modules/mod-epic-bosses"]
+	path = modules/mod-epic-bosses
+	url = https://github.com/mama128/mod-epic-bosses.git
