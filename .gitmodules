@@ -88,3 +88,6 @@
 [submodule "modules/mod-epic-bosses"]
 	path = modules/mod-epic-bosses
 	url = https://github.com/mama128/mod-epic-bosses.git
+[submodule "modules/mod-dungeon-quest-npc"]
+	path = modules/mod-dungeon-quest-npc
+	url = https://github.com/Tntdruid/mod-dungeon-quest-npc.git
