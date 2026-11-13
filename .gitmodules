@@ -91,3 +91,21 @@
 [submodule "modules/mod-dungeon-quest-npc"]
 	path = modules/mod-dungeon-quest-npc
 	url = https://github.com/Tntdruid/mod-dungeon-quest-npc.git
+[submodule "modules/mod-visible-bags"]
+	path = modules/mod-visible-bags
+	url = https://github.com/buildthehomelab/wow-mod-visible-bags.git
+[submodule "modules/mod-retail-druid-forms"]
+	path = modules/mod-retail-druid-forms
+	url = https://github.com/buildthehomelab/wow-mod-retail-druid-forms.git
+[submodule "modules/mod-retail-shaman-totems"]
+	path = modules/mod-retail-shaman-totems
+	url = https://github.com/buildthehomelab/wow-mod-retail-shaman-totems.git
+[submodule "modules/mod-retail-warlock-pets"]
+	path = modules/mod-retail-warlock-pets
+	url = https://github.com/buildthehomelab/wow-mod-retail-warlock-pets.git
+[submodule "modules/mod-retail-pets"]
+	path = modules/mod-retail-pets
+	url = https://github.com/buildthehomelab/wow-mod-retail-pets.git
+[submodule "tools/mod-retail-creatures"]
+	path = tools/mod-retail-creatures
+	url = https://github.com/buildthehomelab/wow-mod-retail-creatures.git

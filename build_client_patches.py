@@ -4,13 +4,13 @@
 build_btl_patches.py
 ====================
 
-Exécute séquentiellement les scripts de fabrication de patchs client de
-"buildthehomelab" (un dépôt GitHub par module) et fusionne tous les résultats
-dans UN SEUL MPQ (ex. patch-V.MPQ).
+Exécute séquentiellement les scripts de fabrication de patchs client et fusionne
+tous les résultats dans UN SEUL MPQ (ex. patch-Z.MPQ).
 
 Principe
 --------
-1. Clone (ou met à jour) le dépôt de chaque patch dans <work>/repos/<nom>.
+1. Utilise les sous-modules locaux des packs clients et clone (ou met à jour) les
+   autres dépôts de patch dans <work>/repos/<nom>.
 2. Pour chaque étape (build_patch.py, build_glue_patch.py, ...) :
    - résout le MPQ "de base" nécessaire (ex. celui qui contient déjà le
      Spell.dbc le plus récent) : d'abord ce qui a déjà été produit par les
@@ -31,17 +31,20 @@ Prérequis
 
 Exemples
 --------
-    python build_btl_patches.py --list
-    python build_btl_patches.py
-    python build_btl_patches.py --out patch-V.MPQ --install
-    python build_btl_patches.py --out patch-Z.MPQ --install \\
+    python build_client_patches.py --list
+    python build_client_patches.py
+    python build_client_patches.py --out patch-V.MPQ --install
+    python build_client_patches.py --out patch-Z.MPQ --install \\
         --overcast-sql modules/mod-weather/data/sql/db-world/mod_weather_overcast.sql
-    python build_btl_patches.py --repo-path forever-racials=D:\\repo\\azerothcore\\modules\\mod-forever-racials
+    python build_client_patches.py --repo-path forever-racials=D:\\repo\\azerothcore\\modules\\mod-forever-racials
 
 Pour ajouter un autre patch de buildthehomelab : ajouter un objet Patch(...)
 dans la liste PATCHES plus bas, dans l'ordre d'exécution voulu.
 --overcast-sql ajoute les tables d'éclairage générées par mod-weather au MPQ et écrit le SQL
 correspondant pour le serveur.
+Les patchs des sous-modules mod-visible-bags, mod-retail-druid-forms,
+mod-retail-shaman-totems, mod-retail-warlock-pets et mod-retail-pets sont ajoutés
+automatiquement. Les packs de créatures et les animaux partagent le cache --retail-cache.
 """
 from __future__ import annotations
 
@@ -51,6 +54,7 @@ import os
 import re
 import shutil
 import subprocess
+import urllib.request
 import zlib
 import sys
 from dataclasses import dataclass, field
@@ -63,6 +67,7 @@ from typing import Dict, Iterator, List, Optional, Tuple
 
 DEFAULT_CLIENT = r"C:\Jeux\World of Warcraft 3.3.5"
 DEFAULT_OUT = "patch-V.MPQ"  # doit se trier APRÈS les MPQ qui fournissent les mêmes fichiers
+VISIBLE_BAGS_ICON_FDID = 5753463
 
 
 @dataclass
@@ -129,6 +134,14 @@ PATCHES: List[Patch] = [
         ],
     ),
     # forever-rogue et forever-hunter : pas de patch client.
+]
+
+CLIENT_PATCHES = [
+    ("visible-bags", "mod-visible-bags"),
+    ("retail-druid-forms", "mod-retail-druid-forms"),
+    ("retail-shaman-totems", "mod-retail-shaman-totems"),
+    ("retail-warlock-pets", "mod-retail-warlock-pets"),
+    ("retail-pets", "mod-retail-pets"),
 ]
 
 
@@ -348,6 +361,46 @@ WIDE_PATCHES = [
      "lib.SFileAddFileEx(h, src, name.encode(),"),
 ]
 
+WIDE_TOOL_PATCHES = [
+    # Certains clients créent des dossiers portant une extension .mpq ; ils ne sont pas des archives.
+    ("            if os.path.exists(path):", "            if os.path.isfile(path):"),
+    ("lib.SFileOpenArchive.argtypes = [ctypes.c_char_p,", "lib.SFileOpenArchive.argtypes = [ctypes.c_wchar_p,"),
+    ("lib.SFileCreateArchive.argtypes = [ctypes.c_char_p,", "lib.SFileCreateArchive.argtypes = [ctypes.c_wchar_p,"),
+    ("lib.SFileExtractFile.argtypes = [h, ctypes.c_char_p, ctypes.c_char_p,",
+     "lib.SFileExtractFile.argtypes = [h, ctypes.c_char_p, ctypes.c_wchar_p,"),
+    ("lib.SFileExtractFile.argtypes = [H, ctypes.c_char_p, ctypes.c_char_p,",
+     "lib.SFileExtractFile.argtypes = [H, ctypes.c_char_p, ctypes.c_wchar_p,"),
+    ("lib.SFileAddFileEx.argtypes = [h, ctypes.c_char_p, ctypes.c_char_p,",
+     "lib.SFileAddFileEx.argtypes = [h, ctypes.c_wchar_p, ctypes.c_char_p,"),
+    ("lib.SFileAddFileEx.argtypes = [H, ctypes.c_char_p, ctypes.c_char_p,",
+     "lib.SFileAddFileEx.argtypes = [H, ctypes.c_wchar_p, ctypes.c_char_p,"),
+    ("SFileOpenArchive(mpq.encode(),", "SFileOpenArchive(mpq,"),
+    ("SFileCreateArchive(out.encode(),", "SFileCreateArchive(out,"),
+    ("SFileExtractFile(h, name.encode(), dst.encode(),", "SFileExtractFile(h, name.encode(), dst,"),
+    ('SFileExtractFile(h, name.encode("latin-1"), local.encode(),',
+     'SFileExtractFile(h, name.encode("latin-1"), local,'),
+    ('SFileExtractFile(h, name.encode("latin-1"), dst.encode(),',
+     'SFileExtractFile(h, name.encode("latin-1"), dst,'),
+    ("SFileAddFileEx(h, src.encode(), name.encode(),", "SFileAddFileEx(h, src, name.encode(),"),
+    ('SFileAddFileEx(h, src.encode(), name.encode("latin-1"),',
+     'SFileAddFileEx(h, src, name.encode("latin-1"),'),
+]
+
+WIDE_OVERCAST_PATCHES = [
+    ("ctypes.CDLL(os.environ.get", "ctypes.WinDLL(os.environ.get"),
+    ('"SFileOpenArchive", [ctypes.c_char_p,', '"SFileOpenArchive", [ctypes.c_wchar_p,'),
+    ('"SFileCreateArchive", [ctypes.c_char_p,', '"SFileCreateArchive", [ctypes.c_wchar_p,'),
+    ('"SFileAddFileEx", [H, ctypes.c_char_p,', '"SFileAddFileEx", [H, ctypes.c_wchar_p,'),
+    ('"SFileExtractFile", [H, ctypes.c_char_p, ctypes.c_char_p,',
+     '"SFileExtractFile", [H, ctypes.c_char_p, ctypes.c_wchar_p,'),
+    ("SFileOpenArchive(mpq.encode(),", "SFileOpenArchive(mpq,"),
+    ("SFileCreateArchive(out.encode(),", "SFileCreateArchive(out,"),
+    ('SFileExtractFile(h, name.encode("latin-1"), dst.encode(), 0)',
+     'SFileExtractFile(h, name.encode("latin-1"), dst, 0)'),
+    ('SFileAddFileEx(h, src.encode(), name.encode("latin-1"),',
+     'SFileAddFileEx(h, src, name.encode("latin-1"),'),
+]
+
 
 def log(msg: str = "") -> None:
     print(msg, flush=True)
@@ -356,10 +409,10 @@ def log(msg: str = "") -> None:
 class Builder:
     def __init__(self, sl: StormLib, client: Path, locale: str, work: Path, out: Path,
                  repos_dir: Path, repo_paths: Dict[str, Path], update: bool, in_locale: bool = False,
-                 modules_dir: Optional[Path] = None):
+                 modules_dir: Optional[Path] = None, retail_cache: Optional[Path] = None):
         self.sl = sl
-        self.client = client
-        self.data = client / "Data"
+        self.client = client.resolve()
+        self.data = self.client / "Data"
         self.locale = locale
         self.work = work
         self.out = out
@@ -367,11 +420,13 @@ class Builder:
         self.steps_dir = work / "steps"
         self.repos_dir = repos_dir
         self.modules_dir = modules_dir
+        self.converter_dir = Path(__file__).resolve().parent / "tools" / "mod-retail-creatures"
+        self.retail_cache = (retail_cache or (work / "retail-cache")).resolve()
         self._extracted: Dict[str, Path] = {}
         self.repo_paths = repo_paths
         self.update = update
         self.in_locale = in_locale
-        self.target_dir = (client / "Data" / locale) if in_locale else (client / "Data")
+        self.target_dir = (self.client / "Data" / locale) if in_locale else (self.client / "Data")
         # fichiers fusionnés : clé minuscule -> (nom dans le MPQ, chemin disque, étape d'origine)
         self.staged: Dict[str, Tuple[str, Path, str]] = {}
         self._handles: Dict[Path, Optional[ctypes.c_void_p]] = {}
@@ -545,9 +600,209 @@ class Builder:
         finally:
             self.sl.close(h)
 
+    def _module(self, name: str) -> Path:
+        module = (self.modules_dir or Path(__file__).resolve().parent / "modules") / name
+        if not module.is_dir() or not any(module.iterdir()):
+            raise StormError(
+                f"Module introuvable ou sous-module non initialisé : {module} "
+                "(exécute git submodule update --init --recursive)."
+            )
+        return module
+
+    def _dbc_directory(self, label: str, names: List[str], preferred_dir: Optional[Path] = None) -> Path:
+        directory = self.work / "dbc" / label
+        if directory.exists():
+            shutil.rmtree(directory)
+        directory.mkdir(parents=True)
+        for name in names:
+            preferred = preferred_dir / name if preferred_dir else None
+            source = preferred if preferred and preferred.is_file() else self.resolve_file(DBC + name)
+            shutil.copy2(source, directory / name)
+        return directory
+
+    def _run_tool(self, script: Path, args: List[str], cwd: Path, env: Dict[str, str]) -> None:
+        if not script.is_file():
+            raise StormError(f"Outil introuvable : {script}")
+        cmd = [sys.executable, str(script)] + [str(arg) for arg in args]
+        log("  $ " + " ".join(f'"{c}"' if " " in c else c for c in cmd))
+        subprocess.run(cmd, cwd=cwd, env=env, check=True)
+
+    def _prepare_wide_tool_repo(self, name: str, repo: Path, scripts: List[str],
+                                patches: Optional[List[Tuple[str, str]]] = None) -> Path:
+        if os.name != "nt" or self.sl.mode != "wide":
+            return repo
+        if name in self._run_repos:
+            return self._run_repos[name]
+
+        run = self.work / "run" / name
+        if run.exists():
+            shutil.rmtree(run)
+        shutil.copytree(repo, run, ignore=shutil.ignore_patterns(".git"))
+        for relative in scripts:
+            target = run / relative
+            if not target.is_file():
+                raise StormError(f"{relative} introuvable dans {repo}")
+            text = target.read_bytes().decode("utf-8")
+            changes = 0
+            selected_patches = WIDE_TOOL_PATCHES if patches is None else patches
+            for old, new in selected_patches:
+                count = text.count(old)
+                if patches is not None and count != 1:
+                    raise StormError(
+                        f"Le script {target} a changé, correctif Unicode inapplicable "
+                        f"(motif attendu une fois : {old!r}, trouvé {count})."
+                    )
+                if count:
+                    text = text.replace(old, new)
+                    changes += count
+            if not changes:
+                raise StormError(
+                    f"Les appels StormLib de {target} ont changé, correctif Unicode inapplicable."
+                )
+            target.write_bytes(text.encode("utf-8"))
+        log(f"  (copie de travail corrigée pour StormLib Windows : {name})")
+        self._run_repos[name] = run
+        return run
+
+    def _build_visible_bags(self, env: Dict[str, str]) -> None:
+        repo = self._prepare_wide_tool_repo(
+            "tool-visible-bags", self._module("mod-visible-bags"), ["tools/build_patch.py"],
+        )
+        base = self.steps_dir / "visible-bags-base.MPQ"
+        base_files = [(self.resolve_file(DBC + name), DBC + name) for name in ("Spell.dbc", "Item.dbc")]
+        self.pack_files(base, base_files)
+
+        stock = self._dbc_directory("visible-bags", [
+            "SpellVisual.dbc", "SpellVisualKit.dbc", "SpellVisualEffectName.dbc",
+            "SpellVisualKitModelAttach.dbc", "ItemDisplayInfo.dbc",
+        ], Path(__file__).resolve().parent / "env" / "dist" / "data" / "dbc")
+        models = self.work / "visible-bags-models"
+        if models.exists():
+            shutil.rmtree(models)
+        self._run_tool(repo / "tools" / "fetch_retail.py", [models], repo, env)
+        icon = models / "icons" / "chicken.blp"
+        if not icon.is_file():
+            request = urllib.request.Request(
+                f"https://wago.tools/api/casc/{VISIBLE_BAGS_ICON_FDID}",
+                headers={"User-Agent": "mod-visible-bags/1.0"},
+            )
+            with urllib.request.urlopen(request, timeout=60) as response:
+                icon_data = response.read()
+            if not icon_data.startswith((b"BLP1", b"BLP2")):
+                raise StormError(f"L’icône retail téléchargée est invalide : {icon}")
+            icon.parent.mkdir(parents=True, exist_ok=True)
+            icon.write_bytes(icon_data)
+            log("  icône retail téléchargée : INV_Cape_Special_ChickenBackpack_C_01")
+
+        out = self.steps_dir / "visible-bags.MPQ"
+        self._run_tool(repo / "tools" / "build_patch.py", [
+            "--patch-p", base, "--stock-dbc", stock, "--models", models, "--out", out,
+        ], repo, env)
+        self.stage_mpq(out, "visible-bags · client patch")
+
+    def _build_creature_pack(self, name: str, module_name: str, env: Dict[str, str]) -> Path:
+        repo = self._module(module_name)
+        if not self.converter_dir.is_dir() or not any(self.converter_dir.iterdir()):
+            raise StormError(
+                f"Convertisseur non initialisé : {self.converter_dir} "
+                "(exécute git submodule update --init --recursive)."
+            )
+        converter = self._prepare_wide_tool_repo(
+            "tool-retail-creatures", self.converter_dir, ["tools/build_patch.py"],
+        )
+        dbc_names = [
+            "CreatureDisplayInfo.dbc", "CreatureModelData.dbc", "AnimationData.dbc", "ParticleColor.dbc",
+        ]
+        if name == "retail-druid-forms":
+            dbc_names += ["SoundEntries.dbc", "CreatureSoundData.dbc"]
+        dbc = self._dbc_directory(name, dbc_names)
+        out = self.steps_dir / f"{name}.MPQ"
+        build_work = self.work / "creature-builds" / name
+        if build_work.exists():
+            shutil.rmtree(build_work)
+        self._run_tool(converter / "tools" / "build_patch.py", [
+            "--pack", repo, "--dbc", dbc, "--cache", self.retail_cache,
+            "--work", build_work, "--out", out,
+        ], converter, env)
+        self.stage_mpq(out, f"{name} · client patch")
+        return out
+
+    def _build_retail_pets(self, env: Dict[str, str]) -> None:
+        repo = self._prepare_wide_tool_repo(
+            "tool-retail-pets", self._module("mod-retail-pets"),
+            ["tools/build_pets.py", "tools/build_gear.py"],
+        )
+        converter = self._prepare_wide_tool_repo(
+            "tool-retail-creatures", self.converter_dir, ["tools/build_patch.py"],
+        )
+        model_patch = self.steps_dir / "retail-pets-model-base.MPQ"
+        self.pack_files(model_patch, [
+            (self.resolve_file(DBC + name), DBC + name)
+            for name in ("CreatureDisplayInfo.dbc", "CreatureModelData.dbc")
+        ])
+
+        spell_files = [
+            "Spell.dbc", "SkillLineAbility.dbc", "Item.dbc", "ItemDisplayInfo.dbc",
+            "SpellVisual.dbc", "SpellVisualKit.dbc", "SoundEntries.dbc",
+        ]
+        optional_files = ["SpellIcon.dbc", "Achievement.dbc", "Achievement_Criteria.dbc"]
+        base_spell = self.steps_dir / "retail-pets-base-spells.MPQ"
+        items = [(self.resolve_file(DBC + name), DBC + name) for name in spell_files]
+        for name in optional_files:
+            archived = DBC + name
+            if archived.lower() in self.staged or self.client_provider(archived):
+                items.append((self.resolve_file(archived), archived))
+        self.pack_files(base_spell, items)
+
+        sound_dbc = self._dbc_directory("retail-pets-sounds", ["SoundEntries.dbc", "CreatureSoundData.dbc"])
+        spell_patch = self.steps_dir / "retail-pets-spells.MPQ"
+        self._run_tool(repo / "tools" / "build_pets.py", [
+            "--patch-w", base_spell, "--patch-z", model_patch, "--client", self.client,
+            "--locale", self.locale, "--cache", self.retail_cache,
+            "--creatures", converter, "--sound-dbc", sound_dbc, "--out", spell_patch,
+        ], repo, env)
+        self.stage_mpq(spell_patch, "retail-pets · spells and items")
+
+        gear_patch = self.steps_dir / "retail-pets-gear.MPQ"
+        gear_env = env.copy()
+        gear_env["RETAIL_CREATURES"] = str(converter)
+        self._run_tool(repo / "tools" / "build_gear.py", [
+            "--patch", spell_patch, "--client", self.client, "--locale", self.locale,
+            "--cache", self.retail_cache, "--out", gear_patch,
+        ], repo, gear_env)
+        self.stage_mpq(gear_patch, "retail-pets · gear")
+
+    def _build_look_sounds(self, pack_names: List[str], env: Dict[str, str]) -> None:
+        pack_modules = dict(CLIENT_PATCHES)
+        converter = self._prepare_wide_tool_repo(
+            "tool-retail-creatures", self.converter_dir, ["tools/build_patch.py"],
+        )
+        sound_dbc = self._dbc_directory("look-sounds", ["SoundEntries.dbc", "CreatureSoundData.dbc"])
+        work = self.work / "look-sounds"
+        if work.exists():
+            shutil.rmtree(work)
+        sound_patch = self.steps_dir / "look-sounds-sounds.MPQ"
+        args: List[str] = []
+        for name in pack_names:
+            args += ["--pack", self._module(pack_modules[name])]
+        args += [
+            "--cdi", self.resolve_file(DBC + "CreatureDisplayInfo.dbc"),
+            "--sound-dbc", sound_dbc, "--cache", self.retail_cache,
+            "--work", work, "--sound-patch", sound_patch,
+        ]
+        self._run_tool(converter / "tools" / "look_sounds.py", args, converter, env)
+        self.stage_mpq(sound_patch, "retail-creatures · modèle sounds")
+
+        dbc_patch = self.steps_dir / "look-sounds-dbc.MPQ"
+        self.pack_files(dbc_patch, [
+            (work / "CreatureDisplayInfo.dbc", DBC + "CreatureDisplayInfo.dbc"),
+            (work / "SoundEntries.dbc", DBC + "SoundEntries.dbc"),
+        ])
+        self.stage_mpq(dbc_patch, "retail-creatures · DBC sons")
+
     # -- exécution --------------------------------------------------------- #
-    def run(self, patches: List[Patch]) -> None:
-        for d in (self.staging, self.steps_dir, self.work / "bases", self.work / "embedded"):
+    def run(self, patches: List[Patch], client_patches: List[str]) -> None:
+        for d in (self.staging, self.steps_dir, self.work / "bases", self.work / "embedded", self.work / "dbc"):
             if d.exists():
                 shutil.rmtree(d)
             d.mkdir(parents=True)
@@ -587,6 +842,21 @@ class Builder:
                     raise StormError(f"Le script n'a pas produit {out}")
                 self.stage_mpq(out, f"{patch.name} · {step.label}")
 
+        creature_packs = [name for name in client_patches if name not in ("visible-bags",)]
+        for name in client_patches:
+            log(f"\n=== {name} ===")
+            if name == "visible-bags":
+                self._build_visible_bags(env)
+            elif name == "retail-pets":
+                self._build_creature_pack(name, "mod-retail-pets", env)
+            else:
+                module_name = dict(CLIENT_PATCHES)[name]
+                self._build_creature_pack(name, module_name, env)
+        if creature_packs:
+            self._build_look_sounds(creature_packs, env)
+        if "retail-pets" in client_patches:
+            self._build_retail_pets(env)
+
         if not self.staged:
             raise StormError("Rien à empaqueter.")
         log(f"\n=== Empaquetage : {self.out} ({len(self.staged)} fichiers) ===")
@@ -595,9 +865,13 @@ class Builder:
 
     def add_overcast(self, sql_path: Path) -> None:
         module = (self.modules_dir or Path(__file__).resolve().parent / "modules") / "mod-weather"
-        script = module / "tools" / "build_overcast.py"
-        if not script.is_file():
-            raise StormError(f"Builder Overcast introuvable : {script}")
+        source_script = module / "tools" / "build_overcast.py"
+        if not source_script.is_file():
+            raise StormError(f"Builder Overcast introuvable : {source_script}")
+        repo = self._prepare_wide_tool_repo(
+            "tool-mod-weather", module, ["tools/build_overcast.py"], WIDE_OVERCAST_PATCHES,
+        )
+        script = repo / "tools" / "build_overcast.py"
 
         overlay = self.work / "overcast.MPQ"
         env = os.environ.copy()
@@ -614,7 +888,7 @@ class Builder:
         log("\n=== Ajout des ciels overcast ===")
         log("  $ " + " ".join(f'"{c}"' if " " in c else c for c in cmd))
         try:
-            subprocess.run(cmd, cwd=module, env=env, check=True)
+            subprocess.run(cmd, cwd=repo, env=env, check=True)
             if not overlay.is_file():
                 raise StormError(f"Le script Overcast n'a pas produit {overlay}")
             self.stage_mpq(overlay, "mod-weather · overcast")
@@ -690,7 +964,7 @@ def cleanup_work(work: Path, marker: Path, out: Path) -> None:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Fabrique un MPQ unique à partir des patchs client de buildthehomelab.")
+    ap = argparse.ArgumentParser(description="Fabrique un MPQ unique à partir des patchs client des modules.")
     ap.add_argument("--client", default=DEFAULT_CLIENT, help="dossier du client WoW 3.3.5 (défaut : %(default)s)")
     ap.add_argument("--locale", help="locale du client (défaut : détection, ex. enUS)")
     ap.add_argument("--out", default=DEFAULT_OUT, help="MPQ final (défaut : %(default)s)")
@@ -699,9 +973,11 @@ def main() -> int:
     ap.add_argument("--repo-path", action="append", default=[], metavar="NOM=CHEMIN",
                     help="utiliser un dépôt déjà cloné (ex. forever-racials=D:\\...\\modules\\mod-forever-racials)")
     ap.add_argument("--modules-dir", default="modules",
-                    help="dossier des modules AzerothCore (submodules mod-forever-*), utilisé s'il existe "
-                         "(défaut : %(default)s) ; sinon les dépôts sont clonés")
-    ap.add_argument("--only", action="append", default=[], metavar="NOM", help="ne traiter que ce patch (répétable)")
+                    help="dossier des modules AzerothCore (défaut : %(default)s)")
+    ap.add_argument("--retail-cache", type=Path, default=Path("retail-cache"),
+                    help="cache des téléchargements des modèles retail (défaut : %(default)s)")
+    ap.add_argument("--only", action="append", default=[], metavar="NOM",
+                    help="ne traiter que ce patch/module (répétable ; voir --list)")
     ap.add_argument("--update", action="store_true", help="git pull des dépôts déjà clonés")
     ap.add_argument("--stormlib", help="chemin de StormLib.dll / libstorm")
     ap.add_argument("--overcast-sql", type=Path,
@@ -722,10 +998,19 @@ def main() -> int:
             log(f"{p.name}  <- {p.url}")
             for s in p.steps:
                 log(f"    - {s.label}: {s.script}")
+        log("\nPatchs des sous-modules :")
+        for name, module in CLIENT_PATCHES:
+            log(f"{name}  <- modules/{module}")
         return 0
 
     patches = [p for p in PATCHES if not args.only or p.name in args.only]
-    if not patches:
+    client_patches = [name for name, _ in CLIENT_PATCHES if not args.only or name in args.only]
+    known_patches = {patch.name for patch in PATCHES} | {name for name, _ in CLIENT_PATCHES}
+    unknown_patches = set(args.only) - known_patches
+    if unknown_patches:
+        log(f"Patch(s) inconnu(s) : {', '.join(sorted(unknown_patches))} (voir --list).")
+        return 2
+    if not patches and not client_patches:
         log("Aucun patch sélectionné (voir --list).")
         return 2
 
@@ -759,9 +1044,10 @@ def main() -> int:
         builder = Builder(sl, client, locale, work, out,
                           Path(args.repos_dir).resolve() if args.repos_dir else work / "repos",
                           repo_paths, args.update, args.in_locale,
-                          Path(args.modules_dir).resolve() if args.modules_dir else None)
+                          Path(args.modules_dir).resolve() if args.modules_dir else None,
+                          args.retail_cache.resolve())
         try:
-            builder.run(patches)
+            builder.run(patches, client_patches)
             if args.overcast_sql:
                 builder.add_overcast(args.overcast_sql)
         finally:

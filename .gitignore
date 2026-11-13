@@ -12,6 +12,8 @@
 !/modules/*.h
 !/modules/*.cmake
 /build*/
+/btl-work/
+/retail-cache/
 /var/*
 !/var/build/.gitkeep
 !/var/ccache/.gitkeep
