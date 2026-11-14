@@ -36,7 +36,6 @@
 !/modules/mod-loot-beam
 !/modules/mod-player-boost
 !/modules/mod-spell-autotarget
-!/modules/mod-worldforged-pickups
 
 /*.override.yml
 /*.override.yaml

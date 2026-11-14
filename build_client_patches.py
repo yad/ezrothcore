@@ -304,17 +304,23 @@ ROOT_ORDER = ["common", "common-2", "expansion", "lichking", "patch"]
 
 
 def load_key(p: Path, data: Path, locale: str) -> Tuple[int, int, str]:
-    """Clé de tri approximant l'ordre de chargement (plus grand = chargé plus tard = prioritaire)."""
+    """Clé de chargement du client : MPQ Data non-patch, locale, patchs locale, patchs Data."""
     stem = p.stem.lower()
     if p.parent.resolve() == data.resolve():
-        group, order = 0, ROOT_ORDER
+        if stem.startswith("patch"):
+            group, order = 3, []
+        else:
+            group, order = 0, ROOT_ORDER
     else:
         loc = locale.lower()
-        group = 1
-        order = [f"base-{loc}", f"locale-{loc}", f"speech-{loc}",
-                 f"expansion-locale-{loc}", f"lichking-locale-{loc}", f"patch-{loc}"]
+        if stem.startswith("patch"):
+            group, order = 2, []
+        else:
+            group = 1
+            order = [f"base-{loc}", f"locale-{loc}", f"speech-{loc}",
+                     f"expansion-locale-{loc}", f"lichking-locale-{loc}"]
     rank = order.index(stem) if stem in order else len(order)
-    return (group, rank, stem)
+    return (group, rank, p.name.lower().replace(".", " "))
 
 
 def detect_locale(data: Path) -> Optional[str]:
@@ -921,12 +927,11 @@ class Builder:
                 f"{self.out.name} (le client utilisera l'autre version) :")
             for name, mpq in problems:
                 log(f"    - {name}  (dans {mpq})")
-            if not self.in_locale and any(
-                    load_key(self.client_provider(n)[1], self.data, self.locale)[0] == 1
+            if self.in_locale and any(
+                    load_key(self.client_provider(n)[1], self.data, self.locale)[0] == 3
                     for n, _ in problems if self.client_provider(n)):
-                log("  -> Le client charge les MPQ du dossier de locale APRÈS ceux de Data\\ : aucune lettre dans")
-                log(f"     Data\\ ne suffit. Relance avec --in-locale --out patch-{self.locale}-V.mpq")
-                log(f"     (le patch sera installé dans Data\\{self.locale}\\).")
+                log("  -> Le client charge les patchs du dossier Data\\ après ceux du dossier de locale.")
+                log(f"     Relance sans --in-locale --out {self.out.name} (le patch sera installé dans Data\\).")
             else:
                 log("  -> renomme le patch avec une lettre qui se trie plus tard (ex. --out patch-W.MPQ).")
         else:
